@@ -49,11 +49,17 @@ export async function supabaseRest<T>(
     cache: "no-store"
   });
 
+  const responseText = await response.text();
+
   if (!response.ok) {
-    const detail = await response.text();
-    throw new Error(`SUPABASE_${response.status}: ${detail}`);
+    throw new Error(`SUPABASE_${response.status}: ${responseText}`);
   }
 
-  if (response.status === 204) return undefined as T;
-  return (await response.json()) as T;
+  if (!responseText.trim()) return undefined as T;
+
+  try {
+    return JSON.parse(responseText) as T;
+  } catch {
+    throw new Error(`SUPABASE_INVALID_JSON_${response.status}: ${responseText.slice(0, 300)}`);
+  }
 }
