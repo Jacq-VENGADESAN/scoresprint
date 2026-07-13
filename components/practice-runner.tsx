@@ -12,6 +12,8 @@ type AnswerResult = {
   selectedFeedback: string;
   masteryBefore: number;
   masteryAfter: number;
+  confidence: string;
+  evidenceCount: number;
   nextReviewAt: string | null;
   resolved: boolean;
 };
@@ -29,6 +31,10 @@ type SessionSummary = {
   durationMs: number;
   completedMinutes: number;
   streak: number;
+  estimatedScore: number;
+  scoreLow: number;
+  scoreHigh: number;
+  scoreConfidence: string;
   skillSummary: Array<{
     skillId: string;
     correct: number;
@@ -188,20 +194,20 @@ export function PracticeRunner({
         <div className="eyebrow">Séance enregistrée</div>
         <h2>{correctCount}/{questions.length} réponses correctes</h2>
         <p className="muted-copy">
-          Tes maîtrises, ton carnet d’erreurs et maintenant ton historique de progression ont été mis à jour.
+          Tes maîtrises, ton carnet d’erreurs et ton estimation de score ont été mis à jour progressivement.
           {weakestSessionSkill ? ` Pendant cette séance, ${weakestSessionSkill} reste la priorité principale.` : ""}
         </p>
         <div className="stats session-summary-stats">
           <div className="stat"><div className="stat-label">Réussite</div><div className="stat-value">{accuracy}%</div></div>
-          <div className="stat"><div className="stat-label">Temps réel</div><div className="stat-value small-stat-value">{formatDuration(summary?.durationMs ?? 0)}</div></div>
+          <div className="stat"><div className="stat-label">Score estimé</div><div className="stat-value small-stat-value">{summary ? `${summary.scoreLow}–${summary.scoreHigh}` : "—"}</div></div>
           <div className="stat"><div className="stat-label">Série actuelle</div><div className="stat-value">{summary?.streak ?? 0} j</div></div>
         </div>
         <div className="notice session-saved-note">
-          Mode {reviewMode ? "révision" : "adaptatif"} · {questions.length} questions · séance ajoutée à tes statistiques.
+          Temps réel : {formatDuration(summary?.durationMs ?? 0)} · estimation centrale {summary?.estimatedScore ?? "—"} · confiance {summary?.scoreConfidence ?? "faible"}.
         </div>
         <div className="session-end-actions">
           <Link href="/dashboard" className="btn btn-primary">Voir ma progression</Link>
-          <Link href="/errors" className="btn btn-secondary">Ouvrir mon carnet d’erreurs</Link>
+          <Link href="/mock-exam" className="btn btn-secondary">Passer un mini-examen</Link>
         </div>
       </section>
     );
@@ -254,6 +260,7 @@ export function PracticeRunner({
           <p><strong>Piège :</strong> {result.trap}</p>
           <div className="mastery-change">
             Maîtrise estimée : <strong>{Math.round(result.masteryBefore)}% → {Math.round(result.masteryAfter)}%</strong>
+            <div className="score-confidence">Confiance {result.confidence} · {result.evidenceCount} réponses observées</div>
           </div>
           {result.resolved ? <div className="review-note">Cette erreur est désormais considérée comme maîtrisée.</div> : null}
           {reviewDate ? <div className="review-note">Prochaine révision prévue le {reviewDate}.</div> : null}

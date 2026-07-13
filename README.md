@@ -10,17 +10,20 @@ ScoreSprint est un prototype de plateforme indépendante de préparation adaptat
 - onboarding et sauvegarde de l’objectif ;
 - diagnostic original de 20 questions ;
 - estimation prudente sous forme de fourchette ;
+- maîtrise calibrée selon la difficulté, la vitesse et le nombre d’observations ;
+- niveau de confiance affiché par compétence ;
+- score évolutif après les séances et les tests ;
+- courbe des huit dernières estimations ;
+- mini-examen original de 30 questions chronométré sur 25 minutes ;
 - sauvegarde des réponses, du score et des maîtrises ;
 - dashboard alimenté par les résultats réels du compte ;
 - séance quotidienne adaptative de 6 à 12 questions ;
 - banque initiale de 18 questions d’entraînement originales ;
 - correction côté serveur avec règle, piège et retour sur le choix ;
-- mise à jour de la maîtrise après chaque réponse ;
 - carnet d’erreurs réel avec répétition espacée ;
 - résumé enregistré à la fin de chaque séance ;
 - historique des séances, statistiques sur 7 jours et série quotidienne ;
 - page tarifaire ;
-- moteur adaptatif TypeScript ;
 - schéma PostgreSQL/Supabase avec RLS ;
 - CI GitHub Actions et Dockerfile.
 
@@ -52,9 +55,10 @@ Dans **Supabase → SQL Editor**, exécuter dans cet ordre le contenu de :
 2. `supabase/migrations/20260713173000_auth_and_goal_persistence.sql` ;
 3. `supabase/migrations/20260713200000_diagnostic_persistence.sql` ;
 4. `supabase/migrations/20260713213000_adaptive_practice.sql` ;
-5. `supabase/migrations/20260713223000_progress_analytics.sql`.
+5. `supabase/migrations/20260713223000_progress_analytics.sql` ;
+6. `supabase/migrations/20260713233000_calibrated_mastery_mini_exams.sql`.
 
-Les deux premières migrations créent les comptes applicatifs, les objectifs et les politiques RLS. La troisième ajoute le diagnostic. La quatrième ajoute les tentatives d’entraînement et le carnet d’erreurs espacé. La cinquième relie chaque réponse à une séance et ajoute les résumés nécessaires aux statistiques de progression.
+La sixième migration ajoute les compteurs de preuves par compétence, les instantanés de score, les mini-examens, leurs réponses, les politiques RLS et un rattrapage des données déjà présentes.
 
 Dans **Authentication → URL Configuration** :
 
@@ -62,33 +66,31 @@ Dans **Authentication → URL Configuration** :
 - ajouter l’URL Vercel de production dans les **Redirect URLs** ;
 - ajouter `http://localhost:3000/**` pour le développement local.
 
-## Fonctionnement du diagnostic
+## Mesure de la maîtrise
 
-Les questions et leurs corrections restent côté serveur. Le navigateur reçoit uniquement les énoncés et les choix. À la fin du diagnostic :
+Une seule mauvaise réponse ne peut plus faire chuter brutalement une compétence. La mise à jour prend en compte :
 
-1. le serveur corrige les réponses ;
-2. le résultat est enregistré dans `diagnostic_runs` ;
-3. chaque réponse est enregistrée dans `diagnostic_answers` ;
-4. `user_mastery` est mis à jour par compétence ;
-5. le score courant du profil est actualisé ;
-6. le dashboard recalcule la séance quotidienne.
+1. la maîtrise précédente ;
+2. la justesse ;
+3. la difficulté ;
+4. le temps de réponse ;
+5. le nombre total d’observations déjà disponibles.
 
-La fourchette affichée est une estimation interne à ScoreSprint et non un score officiel.
+Le dashboard affiche une confiance faible, moyenne ou élevée. Le score évolue progressivement après une séance, tandis qu’un mini-examen chronométré crée une mesure plus forte.
 
-## Fonctionnement de l’entraînement
+## Mini-examen
 
-La page `/practice` sélectionne les questions selon les maîtrises les plus faibles, les erreurs arrivées à échéance et le temps quotidien choisi. Après chaque réponse :
+La page `/mock-exam` propose 30 questions originales :
 
-1. le serveur vérifie la réponse sans exposer la correction au navigateur avant la soumission ;
-2. la tentative est enregistrée dans `practice_attempts` et reliée à la séance active ;
-3. `user_mastery` augmente ou diminue selon la justesse et la vitesse ;
-4. une erreur crée ou met à jour un élément de `user_error_items` ;
-5. une notion revient après 1, 3 ou 7 jours ;
-6. trois réussites consécutives marquent l’erreur comme résolue.
+- 15 questions de partie 5 ;
+- 5 questions de partie 6 ;
+- 10 questions de partie 7 ;
+- 25 minutes ;
+- aucune correction avant la fin ;
+- résultat par partie et fourchette de score ;
+- enregistrement dans `mini_exam_runs`, `mini_exam_answers` et `score_snapshots`.
 
-À la fin de la séance, `study_sessions` stocke la durée réelle, le nombre de questions, la réussite et le détail par compétence. Le dashboard agrège ensuite les sept derniers jours, les séances récentes et la série de jours consécutifs.
-
-La page `/errors` affiche les erreurs actives et permet de lancer une séance dédiée avec `/practice?mode=errors`.
+Les contenus sont originaux et ne reproduisent aucune question officielle.
 
 ## Vérifications
 
@@ -100,11 +102,13 @@ npm run build
 ## Architecture
 
 - `app/` : routes Next.js, pages et endpoints API ;
-- `components/` : composants d’interface ;
+- `components/mini-exam-runner.tsx` : chronomètre et parcours du mini-examen ;
+- `components/score-curve.tsx` : courbe des dernières mesures ;
 - `lib/diagnostic-bank.ts` : banque originale et moteur d’évaluation du diagnostic ;
 - `lib/practice-bank.ts` : banque originale, sélection adaptative et correction de l’entraînement ;
+- `lib/mini-exam-bank.ts` : banque originale de 30 questions et correction serveur ;
+- `lib/measurement.ts` : calibration des maîtrises et évolution prudente du score ;
 - `lib/progress.ts` : calcul de série et agrégation de l’activité hebdomadaire ;
-- `lib/` : logique adaptative, configuration et accès Supabase ;
 - `supabase/migrations/` : modèle de données et sécurité RLS ;
 - `proxy.ts` : renouvellement et protection des sessions.
 

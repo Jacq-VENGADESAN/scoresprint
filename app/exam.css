@@ -1,0 +1,36 @@
+.exam-intro, .exam-result { max-width: 860px; margin: 0 auto 72px; padding: clamp(26px, 5vw, 42px); }
+.exam-intro h2, .exam-result h2 { margin: 10px 0 12px; font-size: clamp(2rem, 5vw, 3.2rem); letter-spacing: -.045em; }
+.exam-rules { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 28px 0; }
+.exam-rules div { display: grid; gap: 5px; padding: 18px; border-radius: 18px; background: var(--soft); }
+.exam-rules strong { font-size: 1.8rem; }
+.exam-rules span { color: var(--muted); font-size: .9rem; }
+.exam-shell { overflow: hidden; }
+.exam-topbar { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 18px; }
+.exam-topbar > div:first-child { display: grid; gap: 4px; }
+.exam-topbar span { color: var(--muted); font-size: .88rem; }
+.exam-timer { min-width: 108px; padding: 10px 14px; border-radius: 14px; background: #eeebff; color: var(--brand); font-size: 1.2rem; font-weight: 900; text-align: center; font-variant-numeric: tabular-nums; }
+.exam-timer-warning { background: #fff0f2; color: var(--danger); }
+.exam-actions { align-items: center; justify-content: space-between; gap: 16px; }
+.exam-result-stats { margin: 28px 0; }
+.exam-small-value { font-size: 1.08rem; }
+.exam-section-results { display: grid; gap: 10px; margin: 0 0 28px; }
+.exam-section-results div { display: flex; justify-content: space-between; gap: 18px; padding: 15px 17px; border: 1px solid var(--line); border-radius: 15px; }
+.score-confidence { display: inline-flex; align-items: center; margin-top: 5px; color: var(--muted); font-size: .78rem; font-weight: 700; }
+.score-curve { margin-top: 24px; padding: 18px; border: 1px solid var(--line); border-radius: 18px; background: var(--soft); }
+.score-curve svg { width: 100%; height: 170px; overflow: visible; }
+.score-curve-line { fill: none; stroke: var(--brand); stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
+.score-curve-area { fill: rgba(91,69,245,.09); }
+.score-curve-point { fill: white; stroke: var(--brand); stroke-width: 3; }
+.score-curve-labels { display: flex; justify-content: space-between; gap: 8px; margin-top: 8px; color: var(--muted); font-size: .75rem; }
+.score-curve-empty { padding: 16px; color: var(--muted); text-align: center; }
+.mastery-evidence { display: flex; justify-content: space-between; gap: 10px; margin-top: 6px; color: var(--muted); font-size: .75rem; }
+.mini-exam-cta { display: flex; align-items: center; justify-content: space-between; gap: 22px; padding: 22px; border: 1px solid var(--line); border-radius: 18px; background: linear-gradient(135deg, #f3f0ff, #ffffff); }
+.mini-exam-cta h3 { margin: 0 0 6px; }
+.mini-exam-cta p { margin: 0; color: var(--muted); line-height: 1.55; }
+
+@media (max-width: 700px) {
+  .exam-rules { grid-template-columns: 1fr; }
+  .exam-actions, .mini-exam-cta { align-items: stretch; flex-direction: column; }
+  .exam-actions .btn, .mini-exam-cta .btn { width: 100%; }
+  .exam-topbar { align-items: flex-start; }
+}

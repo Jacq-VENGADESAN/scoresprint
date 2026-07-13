@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { buildPracticeScoreSnapshot } from "@/lib/measurement";
 import { calculateStreak } from "@/lib/progress";
 import { getCurrentUser, supabaseRest } from "@/lib/supabase-server";
 
@@ -20,6 +21,26 @@ type AttemptRow = {
 
 type CompletedDateRow = {
   completed_at: string | null;
+};
+
+type MasteryRow = {
+  skill_id: string;
+  mastery: number | string;
+  evidence_count: number;
+  correct_count: number;
+};
+
+type SkillRow = {
+  id: string;
+  exam_weight: number | string;
+};
+
+type SnapshotRow = {
+  central_score: number;
+};
+
+type DiagnosticRow = {
+  estimated_score: number;
 };
 
 export async function POST(request: Request) {
@@ -55,6 +76,7 @@ export async function POST(request: Request) {
 
     const totalQuestions = attempts.length;
     const correctAnswers = attempts.filter((attempt) => attempt.is_correct).length;
+    const accuracyRatio = correctAnswers / totalQuestions;
     const completedAt = session.completed_at ?? new Date().toISOString();
     const completedMinutes = Math.max(1, Math.round(durationMs / 60_000));
     const skillMap = new Map<string, { skillId: string; correct: number; total: number }>();
@@ -84,29 +106,79 @@ export async function POST(request: Request) {
       })
     });
 
-    const recentSessions = await supabaseRest<CompletedDateRow[]>(
-      `study_sessions?select=completed_at&user_id=eq.${user.id}&completed_at=not.is.null&order=completed_at.desc&limit=90`
-    );
+    const [recentSessions, masteries, skills, previousSnapshots, diagnostics] = await Promise.all([
+      supabaseRest<CompletedDateRow[]>(
+        `study_sessions?select=completed_at&user_id=eq.${user.id}&completed_at=not.is.null&order=completed_at.desc&limit=90`
+      ),
+      supabaseRest<MasteryRow[]>(
+        `user_mastery?select=skill_id,mastery,evidence_count,correct_count&user_id=eq.${user.id}`
+      ),
+      supabaseRest<SkillRow[]>("skills?select=id,exam_weight"),
+      supabaseRest<SnapshotRow[]>(
+        `score_snapshots?select=central_score&user_id=eq.${user.id}&order=created_at.desc&limit=1`
+      ),
+      supabaseRest<DiagnosticRow[]>(
+        `diagnostic_runs?select=estimated_score&user_id=eq.${user.id}&order=completed_at.desc&limit=1`
+      )
+    ]);
+
     const streak = calculateStreak(
       recentSessions
         .map((item) => item.completed_at)
         .filter((value): value is string => Boolean(value))
     );
+    const weightMap = new Map(skills.map((skill) => [skill.id, Number(skill.exam_weight)]));
+    const scoreSnapshot = buildPracticeScoreSnapshot({
+      previousCentral: previousSnapshots[0]?.central_score,
+      diagnosticCentral: diagnostics[0]?.estimated_score,
+      sessionAccuracy: accuracyRatio,
+      masteries: masteries.map((mastery) => ({
+        mastery: Number(mastery.mastery),
+        evidenceCount: mastery.evidence_count,
+        correctCount: mastery.correct_count,
+        examWeight: weightMap.get(mastery.skill_id) ?? 1
+      }))
+    });
+
+    await supabaseRest<void>("score_snapshots", {
+      method: "POST",
+      headers: { Prefer: "return=minimal" },
+      body: JSON.stringify({
+        user_id: user.id,
+        source: "practice",
+        central_score: scoreSnapshot.central,
+        score_low: scoreSnapshot.scoreLow,
+        score_high: scoreSnapshot.scoreHigh,
+        confidence: scoreSnapshot.confidence,
+        evidence_count: scoreSnapshot.evidenceCount,
+        created_at: completedAt
+      })
+    });
+
+    await supabaseRest<void>(`user_goals?user_id=eq.${user.id}`, {
+      method: "PATCH",
+      headers: { Prefer: "return=minimal" },
+      body: JSON.stringify({ current_score: scoreSnapshot.central })
+    });
 
     return NextResponse.json({
       sessionId,
       totalQuestions,
       correctAnswers,
-      accuracy: Math.round((correctAnswers / totalQuestions) * 100),
+      accuracy: Math.round(accuracyRatio * 100),
       durationMs: Math.round(durationMs),
       completedMinutes,
       streak,
-      skillSummary
+      skillSummary,
+      estimatedScore: scoreSnapshot.central,
+      scoreLow: scoreSnapshot.scoreLow,
+      scoreHigh: scoreSnapshot.scoreHigh,
+      scoreConfidence: scoreSnapshot.confidence
     });
   } catch (error) {
     console.error("Unable to complete practice session", error);
     return NextResponse.json(
-      { error: "Le résumé n’a pas pu être enregistré. Vérifie la migration des statistiques." },
+      { error: "Le résumé n’a pas pu être enregistré. Vérifie la migration de calibration." },
       { status: 500 }
     );
   }

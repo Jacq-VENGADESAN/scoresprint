@@ -4,11 +4,20 @@ import {
   evaluateDiagnostic,
   type DiagnosticAnswerInput
 } from "@/lib/diagnostic-bank";
+import { confidenceFromEvidence } from "@/lib/measurement";
 import { getCurrentUser, supabaseRest } from "@/lib/supabase-server";
 
 type RequestBody = {
   answers?: DiagnosticAnswerInput[];
   durationMs?: number;
+};
+
+type ExistingMastery = {
+  skill_id: string;
+  mastery: number | string;
+  repeated_errors: number;
+  evidence_count: number;
+  correct_count: number;
 };
 
 function isValidAnswer(answer: DiagnosticAnswerInput) {
@@ -76,25 +85,55 @@ export async function POST(request: Request) {
       )
     });
 
+    const skillIds = evaluation.skillBreakdown.map((skill) => skill.skillId);
+    const existingRows = await supabaseRest<ExistingMastery[]>(
+      `user_mastery?select=skill_id,mastery,repeated_errors,evidence_count,correct_count&user_id=eq.${user.id}&skill_id=in.(${skillIds.join(",")})`
+    );
+    const existingMap = new Map(existingRows.map((row) => [row.skill_id, row]));
     const now = new Date();
+
     await supabaseRest<void>("user_mastery?on_conflict=user_id,skill_id", {
       method: "POST",
       headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
       body: JSON.stringify(
         evaluation.skillBreakdown.map((skill) => {
+          const existing = existingMap.get(skill.skillId);
+          const previousEvidence = existing?.evidence_count ?? 0;
+          const totalEvidence = previousEvidence + skill.total;
+          const blendedMastery = totalEvidence > 0
+            ? ((existing ? Number(existing.mastery) : skill.mastery) * previousEvidence + skill.mastery * skill.total) / totalEvidence
+            : skill.mastery;
+          const mastery = Math.round(blendedMastery * 10) / 10;
           const nextReview = new Date(now);
-          nextReview.setDate(nextReview.getDate() + (skill.mastery < 50 ? 1 : skill.mastery < 70 ? 3 : 7));
+          nextReview.setDate(nextReview.getDate() + (mastery < 50 ? 1 : mastery < 70 ? 3 : 7));
           return {
             user_id: user.id,
             skill_id: skill.skillId,
-            mastery: skill.mastery,
-            repeated_errors: skill.total - skill.correct,
+            mastery,
+            repeated_errors: (existing?.repeated_errors ?? 0) + (skill.total - skill.correct),
+            evidence_count: totalEvidence,
+            correct_count: (existing?.correct_count ?? 0) + skill.correct,
             last_reviewed_at: now.toISOString(),
             next_review_at: nextReview.toISOString(),
             updated_at: now.toISOString()
           };
         })
       )
+    });
+
+    await supabaseRest<void>("score_snapshots", {
+      method: "POST",
+      headers: { Prefer: "return=minimal" },
+      body: JSON.stringify({
+        user_id: user.id,
+        source: "diagnostic",
+        central_score: evaluation.estimatedScore,
+        score_low: evaluation.scoreLow,
+        score_high: evaluation.scoreHigh,
+        confidence: confidenceFromEvidence(evaluation.totalQuestions),
+        evidence_count: evaluation.totalQuestions,
+        created_at: now.toISOString()
+      })
     });
 
     await supabaseRest<void>(`user_goals?user_id=eq.${user.id}`, {
@@ -114,7 +153,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("Unable to persist diagnostic", error);
     return NextResponse.json(
-      { error: "L’analyse a échoué. Vérifie que la migration du diagnostic a bien été exécutée dans Supabase." },
+      { error: "L’analyse a échoué. Vérifie la migration de calibration et des mini-examens." },
       { status: 500 }
     );
   }
