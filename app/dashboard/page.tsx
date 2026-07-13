@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ProgressBar } from "@/components/progress-bar";
+import { ScoreCurve } from "@/components/score-curve";
 import { StatCard } from "@/components/stat-card";
 import { buildDailySession } from "@/lib/adaptive";
+import { confidenceFromEvidence } from "@/lib/measurement";
 import { buildWeeklyActivity, calculateStreak, type CompletedSession } from "@/lib/progress";
 import { getCurrentUser, supabaseRest } from "@/lib/supabase-server";
 
@@ -27,6 +29,8 @@ type MasteryRow = {
   mastery: number | string;
   repeated_errors: number;
   last_reviewed_at: string | null;
+  evidence_count: number;
+  correct_count: number;
 };
 
 type SkillRow = {
@@ -42,6 +46,16 @@ type StudySessionRow = CompletedSession & {
   completed_at: string;
 };
 
+type ScoreSnapshotRow = {
+  source: "diagnostic" | "practice" | "mini_exam";
+  central_score: number;
+  score_low: number;
+  score_high: number;
+  confidence: "faible" | "moyenne" | "élevée";
+  evidence_count: number;
+  created_at: string;
+};
+
 function daysUntil(date: string | null) {
   if (!date) return null;
   const today = new Date();
@@ -51,6 +65,12 @@ function daysUntil(date: string | null) {
 
 function formatDate(date: string) {
   return new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short" }).format(new Date(date));
+}
+
+function scoreSourceLabel(source: ScoreSnapshotRow["source"] | undefined) {
+  if (source === "mini_exam") return "Mini-examen chronométré";
+  if (source === "practice") return "Entraînement récent";
+  return "Diagnostic court";
 }
 
 export default async function DashboardPage() {
@@ -80,7 +100,7 @@ export default async function DashboardPage() {
         `diagnostic_runs?select=estimated_score,score_low,score_high,correct_answers,total_questions,completed_at&user_id=eq.${user.id}&order=completed_at.desc&limit=1`
       ),
       supabaseRest<MasteryRow[]>(
-        `user_mastery?select=skill_id,mastery,repeated_errors,last_reviewed_at&user_id=eq.${user.id}&order=mastery.asc`
+        `user_mastery?select=skill_id,mastery,repeated_errors,last_reviewed_at,evidence_count,correct_count&user_id=eq.${user.id}&order=mastery.asc`
       ),
       supabaseRest<SkillRow[]>("skills?select=id,label,exam_weight")
     ]);
@@ -101,14 +121,26 @@ export default async function DashboardPage() {
     analyticsReady = false;
   }
 
+  let scoreSnapshots: ScoreSnapshotRow[] = [];
+  let measurementReady = true;
+  try {
+    scoreSnapshots = await supabaseRest<ScoreSnapshotRow[]>(
+      `score_snapshots?select=source,central_score,score_low,score_high,confidence,evidence_count,created_at&user_id=eq.${user.id}&order=created_at.desc&limit=8`
+    );
+  } catch {
+    measurementReady = false;
+  }
+
   const labelMap = new Map(skillRows.map((skill) => [skill.id, skill.label]));
   const weightMap = new Map(skillRows.map((skill) => [skill.id, Number(skill.exam_weight)]));
   const remainingDays = daysUntil(goal?.exam_date ?? null);
   const dailyMinutes = goal?.daily_minutes ?? 20;
   const targetScore = goal?.target_score ?? 850;
-  const currentScore = latestRun?.estimated_score ?? goal?.current_score ?? 650;
-  const estimateLow = latestRun?.score_low ?? Math.max(10, currentScore - 60);
-  const estimateHigh = latestRun?.score_high ?? Math.min(990, currentScore + 60);
+  const latestSnapshot = scoreSnapshots[0];
+  const currentScore = latestSnapshot?.central_score ?? latestRun?.estimated_score ?? goal?.current_score ?? 650;
+  const estimateLow = latestSnapshot?.score_low ?? latestRun?.score_low ?? Math.max(10, currentScore - 60);
+  const estimateHigh = latestSnapshot?.score_high ?? latestRun?.score_high ?? Math.min(990, currentScore + 60);
+  const scoreConfidence = latestSnapshot?.confidence ?? "faible";
   const progress = Math.max(0, Math.min(100, Math.round((currentScore / targetScore) * 100)));
   const displayName = user.user_metadata?.display_name ?? user.email?.split("@")[0] ?? "toi";
 
@@ -137,7 +169,7 @@ export default async function DashboardPage() {
         <h1>Bonjour {displayName}, voilà ce qui mérite ton temps aujourd’hui.</h1>
         <p>
           {latestRun
-            ? `Ton dernier diagnostic du ${formatDate(latestRun.completed_at)} alimente ton score, tandis que chaque séance enrichit maintenant ton historique réel.`
+            ? "Ton diagnostic, tes séances et tes mini-examens alimentent désormais une estimation progressive plutôt qu’un score figé."
             : "Ton objectif est enregistré. Termine le diagnostic pour remplacer les estimations provisoires par tes propres résultats."}
         </p>
       </header>
@@ -146,10 +178,13 @@ export default async function DashboardPage() {
         <div className="alert alert-warning">Les tables Supabase principales ne sont pas accessibles. Vérifie les deux premières migrations.</div>
       ) : null}
       {!diagnosticReady ? (
-        <div className="alert alert-warning">La migration du diagnostic n’est pas encore exécutée. Le reste de ton compte continue de fonctionner.</div>
+        <div className="alert alert-warning">La migration de calibration n’est pas encore accessible. Exécute le nouveau script SQL.</div>
       ) : null}
       {!analyticsReady ? (
-        <div className="alert alert-warning">La migration des statistiques n’est pas encore accessible. Exécute le nouveau script SQL pour enregistrer les séances.</div>
+        <div className="alert alert-warning">La migration des statistiques n’est pas encore accessible.</div>
+      ) : null}
+      {!measurementReady ? (
+        <div className="alert alert-warning">La courbe de score et les mini-examens nécessitent la nouvelle migration de calibration.</div>
       ) : null}
 
       <div className="dashboard-grid">
@@ -160,15 +195,22 @@ export default async function DashboardPage() {
               <span className="badge">{remainingDays === null ? "Date à définir" : `${remainingDays} jours restants`}</span>
             </div>
             <div className="stats">
-              <StatCard label="Score estimé" value={`${estimateLow}–${estimateHigh}`} detail={latestRun ? "Diagnostic court" : "Fourchette provisoire"} />
+              <StatCard label="Score estimé" value={`${estimateLow}–${estimateHigh}`} detail={scoreSourceLabel(latestSnapshot?.source)} />
               <StatCard label="Objectif" value={String(targetScore)} detail={`Estimation centrale : ${currentScore}`} />
-              <StatCard
-                label={latestRun ? "Diagnostic" : "Temps quotidien"}
-                value={latestRun ? `${latestRun.correct_answers}/${latestRun.total_questions}` : `${dailyMinutes} min`}
-                detail={latestRun ? "Réponses correctes" : "Programme personnalisé"}
-              />
+              <StatCard label="Confiance" value={scoreConfidence} detail={`${latestSnapshot?.evidence_count ?? latestRun?.total_questions ?? 0} observations`} />
             </div>
             <div style={{ marginTop: 22 }}><ProgressBar value={progress} /></div>
+            <ScoreCurve snapshots={scoreSnapshots} />
+          </section>
+
+          <section className="card panel">
+            <div className="mini-exam-cta">
+              <div>
+                <h3>Affiner ton score avec 30 questions chronométrées</h3>
+                <p>Les parties 5, 6 et 7 sont évaluées en 25 minutes. Le résultat pèse davantage qu’une petite séance quotidienne.</p>
+              </div>
+              <Link href="/mock-exam" className="btn btn-primary">Passer le mini-examen</Link>
+            </div>
           </section>
 
           <section className="card panel">
@@ -242,10 +284,15 @@ export default async function DashboardPage() {
             <div className="panel-title"><h3>Maîtrise mesurée</h3></div>
             {masteryRows.length > 0 ? masteryRows.map((row) => {
               const value = Math.round(Number(row.mastery));
+              const confidence = confidenceFromEvidence(row.evidence_count);
               return (
                 <div className="skill" key={row.skill_id}>
                   <div className="skill-top"><span>{labelMap.get(row.skill_id) ?? row.skill_id}</span><strong>{value}%</strong></div>
                   <ProgressBar value={value} />
+                  <div className="mastery-evidence">
+                    <span>Confiance {confidence}</span>
+                    <span>{row.correct_count}/{row.evidence_count} réussites</span>
+                  </div>
                 </div>
               );
             }) : <p style={{ color: "var(--muted)" }}>Aucune compétence mesurée pour le moment.</p>}
@@ -262,7 +309,7 @@ export default async function DashboardPage() {
             <div className="panel-title"><h3>Point d’attention</h3></div>
             <div className="notice">
               {weakest
-                ? `${labelMap.get(weakest.skill_id) ?? weakest.skill_id} est actuellement ta priorité, avec ${Math.round(Number(weakest.mastery))}% de maîtrise estimée.`
+                ? `${labelMap.get(weakest.skill_id) ?? weakest.skill_id} est ta priorité avec ${Math.round(Number(weakest.mastery))}% de maîtrise, sur ${weakest.evidence_count} observations.`
                 : "Le diagnostic identifiera la notion sur laquelle tu gagneras le plus rapidement des points."}
             </div>
             <Link href="/diagnostic" className="btn btn-ghost" style={{ marginTop: 14 }}>
