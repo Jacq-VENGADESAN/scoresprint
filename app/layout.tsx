@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import "./practice.css";
 import "./progress.css";
+import "./exam.css";
 import { Header } from "@/components/header";
 
 export const metadata: Metadata = {
