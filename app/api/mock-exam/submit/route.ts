@@ -22,7 +22,7 @@ type MasteryRow = {
 
 function isValidAnswer(answer: MiniExamAnswerInput) {
   return typeof answer.questionId === "string"
-    && ["A", "B", "C", "D"].includes(answer.selectedOptionId)
+    && ["", "A", "B", "C", "D"].includes(answer.selectedOptionId)
     && Number.isFinite(answer.responseTimeMs)
     && answer.responseTimeMs >= 0;
 }
@@ -45,7 +45,7 @@ export async function POST(request: Request) {
     || uniqueIds.size !== MINI_EXAM_QUESTION_COUNT
     || !answers.every(isValidAnswer)
   ) {
-    return NextResponse.json({ error: "Les 30 questions doivent être complétées avant la correction." }, { status: 400 });
+    return NextResponse.json({ error: "Le mini-examen ne contient pas les 30 questions attendues." }, { status: 400 });
   }
 
   const durationMs = Math.max(0, Math.min(Number(body.durationMs ?? 0), 60 * 60 * 1000));
@@ -84,7 +84,7 @@ export async function POST(request: Request) {
           question_code: answer.questionId,
           part: answer.part,
           skill_id: answer.skillId,
-          selected_option: answer.selectedOptionId,
+          selected_option: answer.selectedOptionId || "UNANSWERED",
           correct_option: answer.correctOptionId,
           is_correct: answer.isCorrect,
           response_time_ms: answer.responseTimeMs
