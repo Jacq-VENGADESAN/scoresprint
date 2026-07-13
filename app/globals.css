@@ -125,6 +125,20 @@ main { min-height: calc(100vh - 74px); }
 .explanation { margin-top: 20px; padding: 18px; background: var(--soft); border-radius: 16px; line-height: 1.65; }
 .question-actions { display: flex; justify-content: flex-end; margin-top: 18px; }
 
+.diagnostic-shell { position: relative; overflow: hidden; }
+.diagnostic-progress { height: 7px; margin: -28px -28px 26px; background: #e7eaf1; }
+.diagnostic-progress > div { height: 100%; background: linear-gradient(90deg, var(--brand), #8f7bff); transition: width .25s ease; }
+.diagnostic-result { max-width: 860px; margin: 0 auto 42px; padding: clamp(24px, 5vw, 42px); }
+.diagnostic-result h2 { font-size: clamp(2rem, 5vw, 3rem); letter-spacing: -.045em; margin: 10px 0 12px; }
+.diagnostic-disclaimer { max-width: 680px; color: var(--muted); line-height: 1.65; }
+.diagnostic-stats { margin: 28px 0; }
+.diagnostic-skill-value { font-size: 1.05rem; letter-spacing: -.02em; }
+.diagnostic-breakdown { display: grid; gap: 12px; margin: 16px 0 28px; }
+.diagnostic-skill { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 16px 18px; border: 1px solid var(--line); border-radius: 16px; }
+.diagnostic-skill div { display: grid; gap: 4px; }
+.diagnostic-skill span { color: var(--muted); font-size: .9rem; }
+.diagnostic-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+
 .error-list { display: grid; gap: 14px; padding-bottom: 72px; }
 .error-row { padding: 20px; display: grid; grid-template-columns: 1fr auto; gap: 18px; align-items: center; }
 .error-row p { color: var(--muted); margin: 6px 0 0; }

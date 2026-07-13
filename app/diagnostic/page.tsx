@@ -1,20 +1,36 @@
-import Link from "next/link";
-import { sampleQuestions } from "@/data/questions";
+import { redirect } from "next/navigation";
+import { DiagnosticRunner } from "@/components/diagnostic-runner";
+import { getPublicDiagnosticQuestions } from "@/lib/diagnostic-bank";
+import { getCurrentUser, supabaseRest } from "@/lib/supabase-server";
 
-export default function DiagnosticPage() {
+type GoalId = { id: string };
+
+export default async function DiagnosticPage() {
+  const user = await getCurrentUser();
+  if (!user) redirect("/auth?next=/diagnostic");
+
+  try {
+    const goals = await supabaseRest<GoalId[]>(`user_goals?select=id&user_id=eq.${user.id}&limit=1`);
+    if (!goals[0]) redirect("/onboarding");
+  } catch {
+    // La page affichera encore le diagnostic ; l’API fournira une erreur claire si la migration manque.
+  }
+
+  const questions = getPublicDiagnosticQuestions();
+
   return (
     <div className="container">
       <header className="page-head">
-        <div className="eyebrow">Diagnostic gratuit</div>
-        <h1>30 questions pour trouver tes priorités.</h1>
-        <p>La première version de ce prototype affiche un aperçu. Le moteur final équilibrera compréhension orale, grammaire, vocabulaire, lecture et vitesse.</p>
+        <div className="eyebrow">Diagnostic personnalisé</div>
+        <h1>{questions.length} questions pour trouver tes vraies priorités.</h1>
+        <p>
+          Réponds sans dictionnaire et sans revenir en arrière. Les bonnes réponses ne sont pas affichées pendant le test afin de ne pas fausser l’analyse.
+        </p>
       </header>
-      <section className="card question-shell">
-        <div className="question-meta"><span className="badge">Aperçu du diagnostic</span><span className="badge">Question 1 / 30</span></div>
-        <div className="question-text">{sampleQuestions[1].prompt}</div>
-        <div className="options">{sampleQuestions[1].options.map(option => <button className="option" key={option.id}><strong style={{ marginRight: 10 }}>{option.id}.</strong>{option.text}</button>)}</div>
-        <div className="question-actions"><Link className="btn btn-primary" href="/dashboard">Voir mon rapport de démonstration</Link></div>
-      </section>
+      <DiagnosticRunner questions={questions} />
+      <p className="footer-note">
+        Le résultat est une estimation interne à ScoreSprint. Il ne constitue pas un résultat officiel au test TOEIC®.
+      </p>
     </div>
   );
 }
