@@ -18,11 +18,15 @@ ScoreSprint est un prototype de plateforme indépendante de préparation adaptat
 - sauvegarde des réponses, du score et des maîtrises ;
 - dashboard alimenté par les résultats réels du compte ;
 - séance quotidienne adaptative de 6 à 12 questions ;
-- banque initiale de 18 questions d’entraînement originales ;
+- banque de 50 questions d’entraînement originales ;
+- 100 questions originales au total entre diagnostic, entraînement et mini-examen ;
+- exclusion prioritaire des questions vues durant les 14 derniers jours ;
 - correction côté serveur avec règle, piège et retour sur le choix ;
 - carnet d’erreurs réel avec répétition espacée ;
 - résumé enregistré à la fin de chaque séance ;
-- historique des séances, statistiques sur 7 jours et série quotidienne ;
+- historique détaillé des séances et mini-examens ;
+- révision de chaque réponse avec temps, choix et correction ;
+- statistiques sur 7 jours et série quotidienne ;
 - page tarifaire ;
 - schéma PostgreSQL/Supabase avec RLS ;
 - CI GitHub Actions et Dockerfile.
@@ -58,7 +62,7 @@ Dans **Supabase → SQL Editor**, exécuter dans cet ordre le contenu de :
 5. `supabase/migrations/20260713223000_progress_analytics.sql` ;
 6. `supabase/migrations/20260713233000_calibrated_mastery_mini_exams.sql`.
 
-La sixième migration ajoute les compteurs de preuves par compétence, les instantanés de score, les mini-examens, leurs réponses, les politiques RLS et un rattrapage des données déjà présentes.
+La sixième migration ajoute les compteurs de preuves par compétence, les instantanés de score, les mini-examens, leurs réponses, les politiques RLS et un rattrapage des données déjà présentes. L’historique détaillé réutilise ces tables et ne nécessite aucune migration supplémentaire.
 
 Dans **Authentication → URL Configuration** :
 
@@ -78,6 +82,16 @@ Une seule mauvaise réponse ne peut plus faire chuter brutalement une compétenc
 
 Le dashboard affiche une confiance faible, moyenne ou élevée. Le score évolue progressivement après une séance, tandis qu’un mini-examen chronométré crée une mesure plus forte.
 
+## Catalogue et répétitions
+
+La banque comprend désormais :
+
+- 20 questions de diagnostic ;
+- 50 questions d’entraînement adaptatif ;
+- 30 questions de mini-examen.
+
+Une séance normale évite autant que possible les questions rencontrées durant les 14 derniers jours. Les erreurs arrivées à échéance restent prioritaires et peuvent donc revenir plus tôt dans le cadre de la répétition espacée.
+
 ## Mini-examen
 
 La page `/mock-exam` propose 30 questions originales :
@@ -92,6 +106,10 @@ La page `/mock-exam` propose 30 questions originales :
 
 Les contenus sont originaux et ne reproduisent aucune question officielle.
 
+## Historique
+
+La page `/history` réunit les diagnostics, séances et mini-examens. Les séances et mini-examens disposent d’un écran détaillé permettant de revoir les questions, les réponses choisies, les bonnes réponses, le temps passé et, pour l’entraînement, les explications pédagogiques complètes.
+
 ## Vérifications
 
 ```bash
@@ -102,10 +120,12 @@ npm run build
 ## Architecture
 
 - `app/` : routes Next.js, pages et endpoints API ;
+- `app/history/` : chronologie et écrans de révision détaillés ;
 - `components/mini-exam-runner.tsx` : chronomètre et parcours du mini-examen ;
 - `components/score-curve.tsx` : courbe des dernières mesures ;
 - `lib/diagnostic-bank.ts` : banque originale et moteur d’évaluation du diagnostic ;
-- `lib/practice-bank.ts` : banque originale, sélection adaptative et correction de l’entraînement ;
+- `lib/practice-bank.ts` et `lib/practice-bank-extra.ts` : catalogue original d’entraînement ;
+- `lib/practice-catalog.ts` : sélection sur 50 questions et limitation des répétitions ;
 - `lib/mini-exam-bank.ts` : banque originale de 30 questions et correction serveur ;
 - `lib/measurement.ts` : calibration des maîtrises et évolution prudente du score ;
 - `lib/progress.ts` : calcul de série et agrégation de l’activité hebdomadaire ;
