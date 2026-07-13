@@ -12,6 +12,14 @@ type RequestBody = {
   durationMs?: number;
 };
 
+type ExistingMastery = {
+  skill_id: string;
+  mastery: number | string;
+  repeated_errors: number;
+  evidence_count: number;
+  correct_count: number;
+};
+
 function isValidAnswer(answer: DiagnosticAnswerInput) {
   return typeof answer.questionId === "string"
     && ["A", "B", "C", "D"].includes(answer.selectedOptionId)
@@ -77,21 +85,34 @@ export async function POST(request: Request) {
       )
     });
 
+    const skillIds = evaluation.skillBreakdown.map((skill) => skill.skillId);
+    const existingRows = await supabaseRest<ExistingMastery[]>(
+      `user_mastery?select=skill_id,mastery,repeated_errors,evidence_count,correct_count&user_id=eq.${user.id}&skill_id=in.(${skillIds.join(",")})`
+    );
+    const existingMap = new Map(existingRows.map((row) => [row.skill_id, row]));
     const now = new Date();
+
     await supabaseRest<void>("user_mastery?on_conflict=user_id,skill_id", {
       method: "POST",
       headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
       body: JSON.stringify(
         evaluation.skillBreakdown.map((skill) => {
+          const existing = existingMap.get(skill.skillId);
+          const previousEvidence = existing?.evidence_count ?? 0;
+          const totalEvidence = previousEvidence + skill.total;
+          const blendedMastery = totalEvidence > 0
+            ? ((existing ? Number(existing.mastery) : skill.mastery) * previousEvidence + skill.mastery * skill.total) / totalEvidence
+            : skill.mastery;
+          const mastery = Math.round(blendedMastery * 10) / 10;
           const nextReview = new Date(now);
-          nextReview.setDate(nextReview.getDate() + (skill.mastery < 50 ? 1 : skill.mastery < 70 ? 3 : 7));
+          nextReview.setDate(nextReview.getDate() + (mastery < 50 ? 1 : mastery < 70 ? 3 : 7));
           return {
             user_id: user.id,
             skill_id: skill.skillId,
-            mastery: skill.mastery,
-            repeated_errors: skill.total - skill.correct,
-            evidence_count: skill.total,
-            correct_count: skill.correct,
+            mastery,
+            repeated_errors: (existing?.repeated_errors ?? 0) + (skill.total - skill.correct),
+            evidence_count: totalEvidence,
+            correct_count: (existing?.correct_count ?? 0) + skill.correct,
             last_reviewed_at: now.toISOString(),
             next_review_at: nextReview.toISOString(),
             updated_at: now.toISOString()
