@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { evaluatePracticeAnswer } from "@/lib/practice-bank";
+import { evaluatePracticeAnswer } from "@/lib/practice-catalog";
 import { updateCalibratedMastery } from "@/lib/measurement";
 import { getCurrentUser, supabaseRest } from "@/lib/supabase-server";
 
