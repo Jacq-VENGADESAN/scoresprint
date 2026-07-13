@@ -38,14 +38,14 @@ export async function supabaseRest<T>(
   const token = await getAccessToken();
   if (!token) throw new Error("AUTH_REQUIRED");
 
+  const headers = new Headers(init.headers);
+  headers.set("apikey", config.publishableKey);
+  headers.set("Authorization", `Bearer ${token}`);
+  if (!headers.has("Content-Type")) headers.set("Content-Type", "application/json");
+
   const response = await fetch(`${config.url}/rest/v1/${path}`, {
     ...init,
-    headers: {
-      apikey: config.publishableKey,
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-      ...(init.headers ?? {})
-    },
+    headers,
     cache: "no-store"
   });
 
