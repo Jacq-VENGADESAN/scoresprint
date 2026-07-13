@@ -5,11 +5,12 @@
 .exam-rules strong { font-size: 1.8rem; }
 .exam-rules span { color: var(--muted); font-size: .9rem; }
 .exam-shell { overflow: hidden; }
-.exam-topbar { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 18px; }
+.exam-topbar { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 12px; }
 .exam-topbar > div:first-child { display: grid; gap: 4px; }
 .exam-topbar span { color: var(--muted); font-size: .88rem; }
 .exam-timer { min-width: 108px; padding: 10px 14px; border-radius: 14px; background: #eeebff; color: var(--brand); font-size: 1.2rem; font-weight: 900; text-align: center; font-variant-numeric: tabular-nums; }
 .exam-timer-warning { background: #fff0f2; color: var(--danger); }
+.exam-shell .session-progress { margin: 0 -28px 26px; }
 .exam-actions { align-items: center; justify-content: space-between; gap: 16px; }
 .exam-result-stats { margin: 28px 0; }
 .exam-small-value { font-size: 1.08rem; }
