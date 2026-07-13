@@ -75,11 +75,11 @@ export default async function PracticePage({ searchParams }: { searchParams: Pro
 
       {!practiceReady ? (
         <div className="alert alert-warning">
-          La migration de l’entraînement n’est pas encore accessible. Exécute le nouveau script SQL avant de répondre aux questions.
+          Les migrations de l’entraînement ou des statistiques ne sont pas encore accessibles. Exécute les nouveaux scripts SQL avant de répondre.
         </div>
       ) : null}
 
-      <PracticeRunner questions={questions} reviewMode={reviewMode} />
+      <PracticeRunner questions={questions} reviewMode={reviewMode} plannedMinutes={dailyMinutes} />
     </div>
   );
 }
