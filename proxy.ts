@@ -6,7 +6,7 @@ import {
 } from "@/lib/auth-cookies";
 import { getSupabaseConfig } from "@/lib/supabase-config";
 
-const protectedPrefixes = ["/dashboard", "/onboarding", "/diagnostic", "/errors"];
+const protectedPrefixes = ["/dashboard", "/onboarding", "/diagnostic", "/practice", "/errors"];
 
 async function tokenIsValid(url: string, key: string, token: string) {
   const response = await fetch(`${url}/auth/v1/user`, {
