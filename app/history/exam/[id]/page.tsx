@@ -51,7 +51,7 @@ export default async function ExamHistoryPage({ params }: { params: Promise<{ id
       `mini_exam_runs?select=id,correct_answers,total_questions,estimated_score,score_low,score_high,duration_ms,section_breakdown,completed_at&id=eq.${encodeURIComponent(id)}&user_id=eq.${user.id}&limit=1`
     ),
     supabaseRest<MiniExamAnswer[]>(
-      `mini_exam_answers?select=id,question_code,part,skill_id,selected_option,correct_option,is_correct,response_time_ms&run_id=eq.${encodeURIComponent(id)}&user_id=eq.${user.id}&order=created_at.asc`
+      `mini_exam_answers?select=id,question_code,part,skill_id,selected_option,correct_option,is_correct,response_time_ms&run_id=eq.${encodeURIComponent(id)}&user_id=eq.${user.id}&order=question_code.asc`
     )
   ]);
 
