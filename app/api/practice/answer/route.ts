@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { updateMastery } from "@/lib/adaptive";
 import { evaluatePracticeAnswer } from "@/lib/practice-bank";
+import { updateCalibratedMastery } from "@/lib/measurement";
 import { getCurrentUser, supabaseRest } from "@/lib/supabase-server";
 
 type RequestBody = {
@@ -13,6 +13,8 @@ type RequestBody = {
 type MasteryRow = {
   mastery: number | string;
   repeated_errors: number;
+  evidence_count: number;
+  correct_count: number;
 };
 
 type ErrorRow = {
@@ -64,11 +66,22 @@ export async function POST(request: Request) {
     }
 
     const masteryRows = await supabaseRest<MasteryRow[]>(
-      `user_mastery?select=mastery,repeated_errors&user_id=eq.${user.id}&skill_id=eq.${question.skillId}&limit=1`
+      `user_mastery?select=mastery,repeated_errors,evidence_count,correct_count&user_id=eq.${user.id}&skill_id=eq.${question.skillId}&limit=1`
     );
-    const currentMastery = masteryRows[0] ? Number(masteryRows[0].mastery) : 50;
-    const currentRepeatedErrors = masteryRows[0]?.repeated_errors ?? 0;
-    const masteryAfter = updateMastery(currentMastery, isCorrect, responseTimeMs, question.targetTimeMs);
+    const current = masteryRows[0];
+    const currentMastery = current ? Number(current.mastery) : 50;
+    const currentRepeatedErrors = current?.repeated_errors ?? 0;
+    const currentEvidence = current?.evidence_count ?? 0;
+    const currentCorrect = current?.correct_count ?? 0;
+    const calibrated = updateCalibratedMastery({
+      current: currentMastery,
+      correct: isCorrect,
+      responseTimeMs,
+      targetTimeMs: question.targetTimeMs,
+      difficulty: question.difficulty,
+      evidenceCount: currentEvidence
+    });
+    const masteryAfter = calibrated.mastery;
     const now = new Date();
     const masteryNextReview = reviewDate(isCorrect ? (masteryAfter >= 75 ? 7 : 3) : 1);
 
@@ -98,6 +111,8 @@ export async function POST(request: Request) {
         skill_id: question.skillId,
         mastery: masteryAfter,
         repeated_errors: isCorrect ? Math.max(0, currentRepeatedErrors - 1) : currentRepeatedErrors + 1,
+        evidence_count: calibrated.evidenceCount,
+        correct_count: currentCorrect + (isCorrect ? 1 : 0),
         last_reviewed_at: now.toISOString(),
         next_review_at: masteryNextReview.toISOString(),
         updated_at: now.toISOString()
@@ -157,13 +172,15 @@ export async function POST(request: Request) {
       selectedFeedback,
       masteryBefore: currentMastery,
       masteryAfter,
+      confidence: calibrated.confidence,
+      evidenceCount: calibrated.evidenceCount,
       nextReviewAt,
       resolved
     });
   } catch (error) {
     console.error("Unable to save practice answer", error);
     return NextResponse.json(
-      { error: "La réponse n’a pas pu être enregistrée. Vérifie les migrations de l’entraînement et des statistiques." },
+      { error: "La réponse n’a pas pu être enregistrée. Vérifie la migration de calibration." },
       { status: 500 }
     );
   }
