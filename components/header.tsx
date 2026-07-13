@@ -6,6 +6,7 @@ const links = [
   ["Entraînement", "/practice"],
   ["Mini-examen", "/mock-exam"],
   ["Progression", "/dashboard"],
+  ["Historique", "/history"],
   ["Tarifs", "/pricing"]
 ] as const;
 
