@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/supabase-server";
 const links = [
   ["Diagnostic", "/diagnostic"],
   ["Entraînement", "/practice"],
+  ["Mini-examen", "/mock-exam"],
   ["Progression", "/dashboard"],
   ["Tarifs", "/pricing"]
 ] as const;
