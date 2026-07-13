@@ -21,23 +21,60 @@ type CompletedAnswer = {
   skillLabel: string;
 };
 
+type SessionSummary = {
+  sessionId: string;
+  totalQuestions: number;
+  correctAnswers: number;
+  accuracy: number;
+  durationMs: number;
+  completedMinutes: number;
+  streak: number;
+  skillSummary: Array<{
+    skillId: string;
+    correct: number;
+    total: number;
+    accuracy: number;
+  }>;
+};
+
+type ApiError = { error?: string };
+
 function formatReviewDate(value: string | null) {
   if (!value) return null;
   return new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "long" }).format(new Date(value));
 }
 
-export function PracticeRunner({ questions, reviewMode = false }: { questions: PublicPracticeQuestion[]; reviewMode?: boolean }) {
+function formatDuration(durationMs: number) {
+  const totalSeconds = Math.max(0, Math.round(durationMs / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return minutes > 0 ? `${minutes} min ${String(seconds).padStart(2, "0")} s` : `${seconds} s`;
+}
+
+export function PracticeRunner({
+  questions,
+  reviewMode = false,
+  plannedMinutes = 20
+}: {
+  questions: PublicPracticeQuestion[];
+  reviewMode?: boolean;
+  plannedMinutes?: number;
+}) {
   const [index, setIndex] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
   const [result, setResult] = useState<AnswerResult | null>(null);
   const [completed, setCompleted] = useState<CompletedAnswer[]>([]);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [summary, setSummary] = useState<SessionSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const startedAt = useRef(Date.now());
+  const questionStartedAt = useRef(Date.now());
+  const sessionStartedAt = useRef(Date.now());
 
   const question = questions[index];
   const finished = index >= questions.length;
-  const correctCount = completed.filter((answer) => answer.isCorrect).length;
+  const localCorrectCount = completed.filter((answer) => answer.isCorrect).length;
+  const correctCount = summary?.correctAnswers ?? localCorrectCount;
   const progress = questions.length === 0 ? 0 : Math.round(((finished ? questions.length : index) / questions.length) * 100);
 
   const weakestSessionSkill = useMemo(() => {
@@ -51,22 +88,42 @@ export function PracticeRunner({ questions, reviewMode = false }: { questions: P
     return [...stats.entries()].sort((a, b) => (a[1].correct / a[1].total) - (b[1].correct / b[1].total))[0]?.[0] ?? null;
   }, [completed]);
 
+  async function ensureSession() {
+    if (sessionId) return sessionId;
+
+    const response = await fetch("/api/practice/session/start", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        plannedMinutes,
+        mode: reviewMode ? "review" : "adaptive",
+        questionIds: questions.map((item) => item.id)
+      })
+    });
+    const payload = (await response.json()) as { sessionId?: string } & ApiError;
+    if (!response.ok || !payload.sessionId) throw new Error(payload.error ?? "La séance n’a pas pu démarrer.");
+    setSessionId(payload.sessionId);
+    return payload.sessionId;
+  }
+
   async function submitAnswer() {
     if (!question || !selected || result || loading) return;
     setLoading(true);
     setError(null);
 
     try {
+      const activeSessionId = await ensureSession();
       const response = await fetch("/api/practice/answer", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          sessionId: activeSessionId,
           questionId: question.id,
           selectedOptionId: selected,
-          responseTimeMs: Date.now() - startedAt.current
+          responseTimeMs: Date.now() - questionStartedAt.current
         })
       });
-      const payload = (await response.json()) as AnswerResult & { error?: string };
+      const payload = (await response.json()) as AnswerResult & ApiError;
       if (!response.ok) throw new Error(payload.error ?? "La correction a échoué.");
       setResult(payload);
       setCompleted((current) => [...current, { isCorrect: payload.isCorrect, skillLabel: question.skillLabel }]);
@@ -77,12 +134,41 @@ export function PracticeRunner({ questions, reviewMode = false }: { questions: P
     }
   }
 
+  async function finishSession() {
+    if (!sessionId || loading) return;
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/practice/session/complete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId,
+          durationMs: Date.now() - sessionStartedAt.current
+        })
+      });
+      const payload = (await response.json()) as SessionSummary & ApiError;
+      if (!response.ok) throw new Error(payload.error ?? "Le résumé de séance n’a pas pu être créé.");
+      setSummary(payload);
+      setIndex(questions.length);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Le résumé de séance n’a pas pu être créé.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   function nextQuestion() {
+    if (index === questions.length - 1) {
+      void finishSession();
+      return;
+    }
     setIndex((current) => current + 1);
     setSelected(null);
     setResult(null);
     setError(null);
-    startedAt.current = Date.now();
+    questionStartedAt.current = Date.now();
   }
 
   if (questions.length === 0) {
@@ -96,18 +182,22 @@ export function PracticeRunner({ questions, reviewMode = false }: { questions: P
   }
 
   if (finished) {
+    const accuracy = summary?.accuracy ?? Math.round((correctCount / questions.length) * 100);
     return (
       <section className="card question-shell session-summary">
-        <div className="eyebrow">Séance terminée</div>
+        <div className="eyebrow">Séance enregistrée</div>
         <h2>{correctCount}/{questions.length} réponses correctes</h2>
         <p className="muted-copy">
-          Tes maîtrises et ton carnet d’erreurs ont été mis à jour après chaque réponse.
+          Tes maîtrises, ton carnet d’erreurs et maintenant ton historique de progression ont été mis à jour.
           {weakestSessionSkill ? ` Pendant cette séance, ${weakestSessionSkill} reste la priorité principale.` : ""}
         </p>
         <div className="stats session-summary-stats">
-          <div className="stat"><div className="stat-label">Réussite</div><div className="stat-value">{Math.round((correctCount / questions.length) * 100)}%</div></div>
-          <div className="stat"><div className="stat-label">Questions</div><div className="stat-value">{questions.length}</div></div>
-          <div className="stat"><div className="stat-label">Mode</div><div className="stat-value small-stat-value">{reviewMode ? "Révision" : "Adaptatif"}</div></div>
+          <div className="stat"><div className="stat-label">Réussite</div><div className="stat-value">{accuracy}%</div></div>
+          <div className="stat"><div className="stat-label">Temps réel</div><div className="stat-value small-stat-value">{formatDuration(summary?.durationMs ?? 0)}</div></div>
+          <div className="stat"><div className="stat-label">Série actuelle</div><div className="stat-value">{summary?.streak ?? 0} j</div></div>
+        </div>
+        <div className="notice session-saved-note">
+          Mode {reviewMode ? "révision" : "adaptatif"} · {questions.length} questions · séance ajoutée à tes statistiques.
         </div>
         <div className="session-end-actions">
           <Link href="/dashboard" className="btn btn-primary">Voir ma progression</Link>
@@ -172,8 +262,8 @@ export function PracticeRunner({ questions, reviewMode = false }: { questions: P
 
       <div className="question-actions">
         {result ? (
-          <button type="button" className="btn btn-primary" onClick={nextQuestion}>
-            {index === questions.length - 1 ? "Terminer la séance" : "Question suivante"}
+          <button type="button" className="btn btn-primary" disabled={loading} onClick={nextQuestion}>
+            {loading ? "Enregistrement…" : index === questions.length - 1 ? "Terminer la séance" : "Question suivante"}
           </button>
         ) : (
           <button type="button" className="btn btn-primary" disabled={!selected || loading} onClick={submitAnswer}>
