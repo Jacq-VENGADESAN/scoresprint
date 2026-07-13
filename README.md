@@ -12,9 +12,12 @@ ScoreSprint est un prototype de plateforme indépendante de préparation adaptat
 - estimation prudente sous forme de fourchette ;
 - sauvegarde des réponses, du score et des maîtrises ;
 - dashboard alimenté par les résultats réels du compte ;
-- séance quotidienne calculée selon les faiblesses ;
-- exercice interactif avec correction pédagogique ;
-- carnet d’erreurs et page tarifaire ;
+- séance quotidienne adaptative de 6 à 12 questions ;
+- banque initiale de 18 questions d’entraînement originales ;
+- correction côté serveur avec règle, piège et retour sur le choix ;
+- mise à jour de la maîtrise après chaque réponse ;
+- carnet d’erreurs réel avec répétition espacée ;
+- page tarifaire ;
 - moteur adaptatif TypeScript ;
 - schéma PostgreSQL/Supabase avec RLS ;
 - CI GitHub Actions et Dockerfile.
@@ -45,9 +48,10 @@ Dans **Supabase → SQL Editor**, exécuter dans cet ordre le contenu de :
 
 1. `supabase/migrations/20260713150000_initial_schema.sql` ;
 2. `supabase/migrations/20260713173000_auth_and_goal_persistence.sql` ;
-3. `supabase/migrations/20260713200000_diagnostic_persistence.sql`.
+3. `supabase/migrations/20260713200000_diagnostic_persistence.sql` ;
+4. `supabase/migrations/20260713213000_adaptive_practice.sql`.
 
-Les deux premières migrations créent les comptes applicatifs, les objectifs et les politiques RLS. La troisième ajoute les tentatives de diagnostic, les réponses détaillées et les compétences supplémentaires.
+Les deux premières migrations créent les comptes applicatifs, les objectifs et les politiques RLS. La troisième ajoute le diagnostic. La quatrième ajoute les tentatives d’entraînement et le carnet d’erreurs espacé.
 
 Dans **Authentication → URL Configuration** :
 
@@ -68,6 +72,19 @@ Les questions et leurs corrections restent côté serveur. Le navigateur reçoit
 
 La fourchette affichée est une estimation interne à ScoreSprint et non un score officiel.
 
+## Fonctionnement de l’entraînement
+
+La page `/practice` sélectionne les questions selon les maîtrises les plus faibles, les erreurs arrivées à échéance et le temps quotidien choisi. Après chaque réponse :
+
+1. le serveur vérifie la réponse sans exposer la correction au navigateur avant la soumission ;
+2. la tentative est enregistrée dans `practice_attempts` ;
+3. `user_mastery` augmente ou diminue selon la justesse et la vitesse ;
+4. une erreur crée ou met à jour un élément de `user_error_items` ;
+5. une notion revient après 1, 3 ou 7 jours ;
+6. trois réussites consécutives marquent l’erreur comme résolue.
+
+La page `/errors` affiche les erreurs actives et permet de lancer une séance dédiée avec `/practice?mode=errors`.
+
 ## Vérifications
 
 ```bash
@@ -79,8 +96,8 @@ npm run build
 
 - `app/` : routes Next.js, pages et endpoints API ;
 - `components/` : composants d’interface ;
-- `data/` : questions de démonstration pour l’entraînement ;
 - `lib/diagnostic-bank.ts` : banque originale et moteur d’évaluation du diagnostic ;
+- `lib/practice-bank.ts` : banque originale, sélection adaptative et correction de l’entraînement ;
 - `lib/` : logique adaptative, configuration et accès Supabase ;
 - `supabase/migrations/` : modèle de données et sécurité RLS ;
 - `proxy.ts` : renouvellement et protection des sessions.
