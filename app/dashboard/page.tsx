@@ -3,9 +3,10 @@ import { redirect } from "next/navigation";
 import { ProgressBar } from "@/components/progress-bar";
 import { StatCard } from "@/components/stat-card";
 import { buildDailySession } from "@/lib/adaptive";
+import { buildWeeklyActivity, calculateStreak, type CompletedSession } from "@/lib/progress";
 import { getCurrentUser, supabaseRest } from "@/lib/supabase-server";
 
- type Goal = {
+type Goal = {
   current_score: number | null;
   target_score: number;
   exam_date: string | null;
@@ -32,6 +33,13 @@ type SkillRow = {
   id: string;
   label: string;
   exam_weight: number | string;
+};
+
+type StudySessionRow = CompletedSession & {
+  id: string;
+  mode: "adaptive" | "review";
+  completed_minutes: number;
+  completed_at: string;
 };
 
 function daysUntil(date: string | null) {
@@ -83,6 +91,16 @@ export default async function DashboardPage() {
     diagnosticReady = false;
   }
 
+  let studySessions: StudySessionRow[] = [];
+  let analyticsReady = true;
+  try {
+    studySessions = await supabaseRest<StudySessionRow[]>(
+      `study_sessions?select=id,mode,total_questions,correct_answers,duration_ms,completed_minutes,completed_at&user_id=eq.${user.id}&completed_at=not.is.null&order=completed_at.desc&limit=30`
+    );
+  } catch {
+    analyticsReady = false;
+  }
+
   const labelMap = new Map(skillRows.map((skill) => [skill.id, skill.label]));
   const weightMap = new Map(skillRows.map((skill) => [skill.id, Number(skill.exam_weight)]));
   const remainingDays = daysUntil(goal?.exam_date ?? null);
@@ -101,8 +119,16 @@ export default async function DashboardPage() {
     repeatedErrors: row.repeated_errors,
     lastReviewedAt: row.last_reviewed_at ?? undefined
   }));
-  const session = buildDailySession(masterySkills, dailyMinutes, remainingDays ?? 45);
+  const sessionPlan = buildDailySession(masterySkills, dailyMinutes, remainingDays ?? 45);
   const weakest = masteryRows[0];
+
+  const weeklyActivity = buildWeeklyActivity(studySessions);
+  const weeklyQuestions = weeklyActivity.reduce((sum, day) => sum + day.questions, 0);
+  const weeklyCorrect = weeklyActivity.reduce((sum, day) => sum + day.correct, 0);
+  const weeklyMinutes = Math.round(weeklyActivity.reduce((sum, day) => sum + day.durationMs, 0) / 60_000);
+  const weeklyAccuracy = weeklyQuestions > 0 ? Math.round((weeklyCorrect / weeklyQuestions) * 100) : 0;
+  const streak = calculateStreak(studySessions.map((session) => session.completed_at));
+  const maxDailyQuestions = Math.max(1, ...weeklyActivity.map((day) => day.questions));
 
   return (
     <div className="container">
@@ -111,7 +137,7 @@ export default async function DashboardPage() {
         <h1>Bonjour {displayName}, voilà ce qui mérite ton temps aujourd’hui.</h1>
         <p>
           {latestRun
-            ? `Ton dernier diagnostic du ${formatDate(latestRun.completed_at)} alimente maintenant ton score, tes priorités et ta séance.`
+            ? `Ton dernier diagnostic du ${formatDate(latestRun.completed_at)} alimente ton score, tandis que chaque séance enrichit maintenant ton historique réel.`
             : "Ton objectif est enregistré. Termine le diagnostic pour remplacer les estimations provisoires par tes propres résultats."}
         </p>
       </header>
@@ -121,6 +147,9 @@ export default async function DashboardPage() {
       ) : null}
       {!diagnosticReady ? (
         <div className="alert alert-warning">La migration du diagnostic n’est pas encore exécutée. Le reste de ton compte continue de fonctionner.</div>
+      ) : null}
+      {!analyticsReady ? (
+        <div className="alert alert-warning">La migration des statistiques n’est pas encore accessible. Exécute le nouveau script SQL pour enregistrer les séances.</div>
       ) : null}
 
       <div className="dashboard-grid">
@@ -143,10 +172,53 @@ export default async function DashboardPage() {
           </section>
 
           <section className="card panel">
+            <div className="panel-title">
+              <h2>Tes 7 derniers jours</h2>
+              <span className="badge">{studySessions.length > 0 ? `${streak} jour${streak > 1 ? "s" : ""} de série` : "Première séance à faire"}</span>
+            </div>
+            <div className="stats">
+              <StatCard label="Questions" value={String(weeklyQuestions)} detail="Sur les 7 derniers jours" />
+              <StatCard label="Réussite" value={`${weeklyAccuracy}%`} detail={`${weeklyCorrect} bonnes réponses`} />
+              <StatCard label="Temps actif" value={`${weeklyMinutes} min`} detail={`${weeklyActivity.reduce((sum, day) => sum + day.sessions, 0)} séances`} />
+            </div>
+
+            <div className="weekly-chart" aria-label="Activité des sept derniers jours">
+              {weeklyActivity.map((day) => {
+                const height = day.questions > 0 ? Math.max(12, Math.round((day.questions / maxDailyQuestions) * 100)) : 4;
+                return (
+                  <div className="weekly-day" key={day.dateKey} title={`${day.questions} questions · ${day.accuracy}% de réussite`}>
+                    <div className="weekly-bar-track">
+                      <div className={`weekly-bar ${day.questions === 0 ? "weekly-bar-empty" : ""}`} style={{ height: `${height}%` }} />
+                    </div>
+                    <strong>{day.questions}</strong>
+                    <span>{day.label}</span>
+                  </div>
+                );
+              })}
+            </div>
+
+            {studySessions.length > 0 ? (
+              <div className="recent-session-list">
+                {studySessions.slice(0, 3).map((studySession) => (
+                  <div className="recent-session" key={studySession.id}>
+                    <div>
+                      <strong>{studySession.mode === "review" ? "Révision d’erreurs" : "Séance adaptative"}</strong>
+                      <span>{formatDate(studySession.completed_at)} · {studySession.completed_minutes} min</span>
+                    </div>
+                    <strong>{studySession.correct_answers}/{studySession.total_questions}</strong>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="notice analytics-empty">Termine une séance pour faire apparaître ta série, ton temps de travail et ta régularité.</div>
+            )}
+          </section>
+
+          <section className="card panel">
             <div className="panel-title"><h2>Séance personnalisée</h2><span style={{ color: "var(--muted)" }}>{dailyMinutes} minutes</span></div>
-            {session.length > 0 ? (
+            {sessionPlan.length > 0 ? (
               <div className="session-list">
-                {session.map((block) => (
+                {sessionPlan.map((block) => (
                   <div className="session-item" key={block.skillId}>
                     <span className="session-time">{block.minutes} min</span>
                     <div>
@@ -177,6 +249,13 @@ export default async function DashboardPage() {
                 </div>
               );
             }) : <p style={{ color: "var(--muted)" }}>Aucune compétence mesurée pour le moment.</p>}
+          </section>
+
+          <section className="card panel">
+            <div className="panel-title"><h3>Régularité</h3></div>
+            <div className="streak-number">{streak}</div>
+            <p className="muted-copy" style={{ marginTop: 4 }}>jour{streak > 1 ? "s" : ""} consécutif{streak > 1 ? "s" : ""} avec une séance terminée.</p>
+            <Link href="/practice" className="btn btn-ghost">Continuer ma série →</Link>
           </section>
 
           <section className="card panel">

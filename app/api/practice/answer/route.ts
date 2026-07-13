@@ -4,6 +4,7 @@ import { evaluatePracticeAnswer } from "@/lib/practice-bank";
 import { getCurrentUser, supabaseRest } from "@/lib/supabase-server";
 
 type RequestBody = {
+  sessionId?: string;
   questionId?: string;
   selectedOptionId?: string;
   responseTimeMs?: number;
@@ -17,6 +18,11 @@ type MasteryRow = {
 type ErrorRow = {
   error_count: number;
   success_streak: number;
+};
+
+type SessionRow = {
+  id: string;
+  completed_at: string | null;
 };
 
 function reviewDate(days: number) {
@@ -36,18 +42,27 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "La réponse envoyée est illisible." }, { status: 400 });
   }
 
+  const sessionId = typeof body.sessionId === "string" ? body.sessionId : "";
   const questionId = typeof body.questionId === "string" ? body.questionId : "";
   const selectedOptionId = typeof body.selectedOptionId === "string" ? body.selectedOptionId : "";
   const responseTimeMs = Math.max(0, Math.min(Number(body.responseTimeMs ?? 0), 10 * 60 * 1000));
   const evaluation = evaluatePracticeAnswer(questionId, selectedOptionId);
 
-  if (!evaluation || !Number.isFinite(responseTimeMs)) {
-    return NextResponse.json({ error: "Cette question ou cette réponse n’est pas valide." }, { status: 400 });
+  if (!sessionId || !evaluation || !Number.isFinite(responseTimeMs)) {
+    return NextResponse.json({ error: "Cette séance, cette question ou cette réponse n’est pas valide." }, { status: 400 });
   }
 
   const { question, isCorrect, selectedFeedback } = evaluation;
 
   try {
+    const sessions = await supabaseRest<SessionRow[]>(
+      `study_sessions?select=id,completed_at&id=eq.${sessionId}&user_id=eq.${user.id}&limit=1`
+    );
+    const session = sessions[0];
+    if (!session || session.completed_at) {
+      return NextResponse.json({ error: "Cette séance est introuvable ou déjà terminée." }, { status: 409 });
+    }
+
     const masteryRows = await supabaseRest<MasteryRow[]>(
       `user_mastery?select=mastery,repeated_errors&user_id=eq.${user.id}&skill_id=eq.${question.skillId}&limit=1`
     );
@@ -61,6 +76,7 @@ export async function POST(request: Request) {
       method: "POST",
       headers: { Prefer: "return=minimal" },
       body: JSON.stringify({
+        session_id: sessionId,
         user_id: user.id,
         question_code: question.id,
         skill_id: question.skillId,
@@ -147,7 +163,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("Unable to save practice answer", error);
     return NextResponse.json(
-      { error: "La réponse n’a pas pu être enregistrée. Vérifie que la migration de l’entraînement a été exécutée." },
+      { error: "La réponse n’a pas pu être enregistrée. Vérifie les migrations de l’entraînement et des statistiques." },
       { status: 500 }
     );
   }
