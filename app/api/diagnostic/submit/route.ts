@@ -4,6 +4,7 @@ import {
   evaluateDiagnostic,
   type DiagnosticAnswerInput
 } from "@/lib/diagnostic-bank";
+import { confidenceFromEvidence } from "@/lib/measurement";
 import { getCurrentUser, supabaseRest } from "@/lib/supabase-server";
 
 type RequestBody = {
@@ -89,12 +90,29 @@ export async function POST(request: Request) {
             skill_id: skill.skillId,
             mastery: skill.mastery,
             repeated_errors: skill.total - skill.correct,
+            evidence_count: skill.total,
+            correct_count: skill.correct,
             last_reviewed_at: now.toISOString(),
             next_review_at: nextReview.toISOString(),
             updated_at: now.toISOString()
           };
         })
       )
+    });
+
+    await supabaseRest<void>("score_snapshots", {
+      method: "POST",
+      headers: { Prefer: "return=minimal" },
+      body: JSON.stringify({
+        user_id: user.id,
+        source: "diagnostic",
+        central_score: evaluation.estimatedScore,
+        score_low: evaluation.scoreLow,
+        score_high: evaluation.scoreHigh,
+        confidence: confidenceFromEvidence(evaluation.totalQuestions),
+        evidence_count: evaluation.totalQuestions,
+        created_at: now.toISOString()
+      })
     });
 
     await supabaseRest<void>(`user_goals?user_id=eq.${user.id}`, {
@@ -114,7 +132,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("Unable to persist diagnostic", error);
     return NextResponse.json(
-      { error: "L’analyse a échoué. Vérifie que la migration du diagnostic a bien été exécutée dans Supabase." },
+      { error: "L’analyse a échoué. Vérifie la migration de calibration et des mini-examens." },
       { status: 500 }
     );
   }
