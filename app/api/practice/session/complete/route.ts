@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { consumeFreeUsage, FREE_LIMITS, getAccessSummary } from "@/lib/access";
 import { buildPracticeScoreSnapshot } from "@/lib/measurement";
 import { calculateStreak } from "@/lib/progress";
 import { getCurrentUser, supabaseRest } from "@/lib/supabase-server";
@@ -66,6 +67,9 @@ export async function POST(request: Request) {
     );
     const session = sessions[0];
     if (!session) return NextResponse.json({ error: "Cette séance est introuvable." }, { status: 404 });
+    if (session.completed_at) {
+      return NextResponse.json({ error: "Cette séance a déjà été enregistrée." }, { status: 409 });
+    }
 
     const attempts = await supabaseRest<AttemptRow[]>(
       `practice_attempts?select=skill_id,is_correct,response_time_ms&session_id=eq.${sessionId}&user_id=eq.${user.id}&order=created_at.asc`
@@ -74,10 +78,29 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Aucune réponse n’a été enregistrée pour cette séance." }, { status: 400 });
     }
 
+    const access = await getAccessSummary(user.id);
+    if (!access.isPremium) {
+      const consumed = await consumeFreeUsage(
+        "practice_session",
+        access.practice.periodStart,
+        FREE_LIMITS.practiceSessionsPerDay
+      );
+      if (!consumed.allowed) {
+        return NextResponse.json(
+          {
+            code: "UPGRADE_REQUIRED",
+            error: "La séance gratuite du jour est déjà enregistrée. Passe à Premium pour terminer plusieurs séances par jour.",
+            upgradeUrl: "/pricing"
+          },
+          { status: 402 }
+        );
+      }
+    }
+
     const totalQuestions = attempts.length;
     const correctAnswers = attempts.filter((attempt) => attempt.is_correct).length;
     const accuracyRatio = correctAnswers / totalQuestions;
-    const completedAt = session.completed_at ?? new Date().toISOString();
+    const completedAt = new Date().toISOString();
     const completedMinutes = Math.max(1, Math.round(durationMs / 60_000));
     const skillMap = new Map<string, { skillId: string; correct: number; total: number }>();
 
@@ -93,7 +116,7 @@ export async function POST(request: Request) {
       accuracy: Math.round((skill.correct / skill.total) * 100)
     }));
 
-    await supabaseRest<void>(`study_sessions?id=eq.${sessionId}&user_id=eq.${user.id}`, {
+    await supabaseRest<void>(`study_sessions?id=eq.${sessionId}&user_id=eq.${user.id}&completed_at=is.null`, {
       method: "PATCH",
       headers: { Prefer: "return=minimal" },
       body: JSON.stringify({
@@ -178,7 +201,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("Unable to complete practice session", error);
     return NextResponse.json(
-      { error: "Le résumé n’a pas pu être enregistré. Vérifie la migration de calibration." },
+      { error: "Le résumé n’a pas pu être enregistré. Vérifie la migration des quotas gratuits." },
       { status: 500 }
     );
   }
