@@ -42,28 +42,26 @@ begin
     return;
   end if;
 
-  select counter.usage_count
-  into current_count
-  from public.usage_counters as counter
-  where counter.user_id = current_user_id
-    and counter.metric = p_metric
-    and counter.period_start = p_period_start
-  for update;
-
-  current_count := coalesce(current_count, 0);
-
-  if current_count >= p_limit then
-    return query select false, current_count;
-    return;
-  end if;
-
   insert into public.usage_counters (user_id, metric, period_start, usage_count, updated_at)
   values (current_user_id, p_metric, p_period_start, 1, now())
   on conflict (user_id, metric, period_start)
   do update set
     usage_count = public.usage_counters.usage_count + 1,
     updated_at = now()
+  where public.usage_counters.usage_count < p_limit
   returning public.usage_counters.usage_count into current_count;
+
+  if current_count is null then
+    select counter.usage_count
+    into current_count
+    from public.usage_counters as counter
+    where counter.user_id = current_user_id
+      and counter.metric = p_metric
+      and counter.period_start = p_period_start;
+
+    return query select false, coalesce(current_count, p_limit);
+    return;
+  end if;
 
   return query select true, current_count;
 end;
