@@ -27,9 +27,14 @@ ScoreSprint est un prototype de plateforme indépendante de préparation adaptat
 - historique détaillé des séances et mini-examens ;
 - révision de chaque réponse avec temps, choix et correction ;
 - statistiques sur 7 jours et série quotidienne ;
-- page tarifaire ;
+- offre gratuite avec quotas vérifiés côté serveur ;
+- architecture Premium fondée sur la table `subscriptions` ;
+- page de gestion de l’accès et de l’utilisation ;
+- page tarifaire prête pour Stripe, sans paiement actif ;
 - schéma PostgreSQL/Supabase avec RLS ;
 - CI GitHub Actions et Dockerfile.
+
+ScoreSprint n’utilise actuellement aucune API d’intelligence artificielle. Les questions, corrections et explications sont contrôlées et enregistrées à l’avance.
 
 ## Démarrage local
 
@@ -60,15 +65,33 @@ Dans **Supabase → SQL Editor**, exécuter dans cet ordre le contenu de :
 3. `supabase/migrations/20260713200000_diagnostic_persistence.sql` ;
 4. `supabase/migrations/20260713213000_adaptive_practice.sql` ;
 5. `supabase/migrations/20260713223000_progress_analytics.sql` ;
-6. `supabase/migrations/20260713233000_calibrated_mastery_mini_exams.sql`.
+6. `supabase/migrations/20260713233000_calibrated_mastery_mini_exams.sql` ;
+7. `supabase/migrations/20260714113000_free_tier_usage_limits.sql`.
 
-La sixième migration ajoute les compteurs de preuves par compétence, les instantanés de score, les mini-examens, leurs réponses, les politiques RLS et un rattrapage des données déjà présentes. L’historique détaillé réutilise ces tables et ne nécessite aucune migration supplémentaire.
+La septième migration ajoute les compteurs d’utilisation, une fonction PostgreSQL de consommation atomique des quotas, les politiques RLS et un rattrapage des séances et mini-examens existants.
 
 Dans **Authentication → URL Configuration** :
 
 - définir **Site URL** sur l’URL Vercel de production ;
 - ajouter l’URL Vercel de production dans les **Redirect URLs** ;
 - ajouter `http://localhost:3000/**` pour le développement local.
+
+## Offre gratuite et Premium
+
+Le compte gratuit est défini dans `lib/access.ts` :
+
+- 1 séance adaptative ou révision d’erreurs par jour ;
+- 1 mini-examen par mois ;
+- historique accessible sur les 7 derniers jours ;
+- diagnostic et suivi des compétences disponibles.
+
+Un abonnement actif dans `subscriptions`, avec un `plan_code` différent de `free` et une date de fin encore valide, active Premium :
+
+- séances illimitées ;
+- mini-examens illimités ;
+- historique complet.
+
+Les quotas sont vérifiés dans les routes serveur. Ils ne reposent donc pas seulement sur l’affichage des boutons. Stripe n’est pas encore connecté et aucun paiement n’est actuellement possible.
 
 ## Mesure de la maîtrise
 
@@ -120,9 +143,12 @@ npm run build
 ## Architecture
 
 - `app/` : routes Next.js, pages et endpoints API ;
+- `app/account/` : statut du plan et suivi des quotas ;
 - `app/history/` : chronologie et écrans de révision détaillés ;
+- `components/upgrade-gate.tsx` : blocage pédagogique des fonctionnalités Premium ;
 - `components/mini-exam-runner.tsx` : chronomètre et parcours du mini-examen ;
 - `components/score-curve.tsx` : courbe des dernières mesures ;
+- `lib/access.ts` : droits d’accès, quotas gratuits et détection Premium ;
 - `lib/diagnostic-bank.ts` : banque originale et moteur d’évaluation du diagnostic ;
 - `lib/practice-bank.ts` et `lib/practice-bank-extra.ts` : catalogue original d’entraînement ;
 - `lib/practice-catalog.ts` : sélection sur 50 questions et limitation des répétitions ;
