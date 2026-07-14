@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { evaluateDatabasePracticeAnswer } from "@/lib/database-questions";
 import { evaluatePracticeAnswer } from "@/lib/practice-catalog";
 import { updateCalibratedMastery } from "@/lib/measurement";
 import { getCurrentUser, supabaseRest } from "@/lib/supabase-server";
@@ -48,7 +49,8 @@ export async function POST(request: Request) {
   const questionId = typeof body.questionId === "string" ? body.questionId : "";
   const selectedOptionId = typeof body.selectedOptionId === "string" ? body.selectedOptionId : "";
   const responseTimeMs = Math.max(0, Math.min(Number(body.responseTimeMs ?? 0), 10 * 60 * 1000));
-  const evaluation = evaluatePracticeAnswer(questionId, selectedOptionId);
+  const evaluation = evaluatePracticeAnswer(questionId, selectedOptionId)
+    ?? await evaluateDatabasePracticeAnswer(questionId, selectedOptionId);
 
   if (!sessionId || !evaluation || !Number.isFinite(responseTimeMs)) {
     return NextResponse.json({ error: "Cette séance, cette question ou cette réponse n’est pas valide." }, { status: 400 });

@@ -2,7 +2,9 @@ import { redirect } from "next/navigation";
 import { PracticeRunner } from "@/components/practice-runner";
 import { UpgradeGate } from "@/components/upgrade-gate";
 import { getAccessSummary, type AccessSummary } from "@/lib/access";
+import { getPublicPublishedDatabaseQuestions } from "@/lib/database-questions";
 import { buildPracticeSession } from "@/lib/practice-catalog";
+import type { PublicPracticeQuestion } from "@/lib/practice-bank";
 import { getCurrentUser, supabaseRest } from "@/lib/supabase-server";
 
 type Goal = {
@@ -34,6 +36,7 @@ export default async function PracticePage({ searchParams }: { searchParams: Pro
   let masteryRows: MasteryRow[] = [];
   let errorRows: ErrorRow[] = [];
   let recentAttempts: RecentAttemptRow[] = [];
+  let managedQuestions: PublicPracticeQuestion[] = [];
   let practiceReady = true;
   let accessReady = true;
   let access: AccessSummary | null = null;
@@ -42,6 +45,12 @@ export default async function PracticePage({ searchParams }: { searchParams: Pro
     access = await getAccessSummary(user.id);
   } catch {
     accessReady = false;
+  }
+
+  try {
+    managedQuestions = await getPublicPublishedDatabaseQuestions();
+  } catch {
+    managedQuestions = [];
   }
 
   try {
@@ -78,7 +87,7 @@ export default async function PracticePage({ searchParams }: { searchParams: Pro
   const excludedQuestionCodes = reviewMode ? [] : [...new Set(recentAttempts.map((attempt) => attempt.question_code))];
   const questions = reviewMode && dueQuestionCodes.length === 0
     ? []
-    : buildPracticeSession(priorities, dueQuestionCodes, questionCount, seed, excludedQuestionCodes);
+    : buildPracticeSession(priorities, dueQuestionCodes, questionCount, seed, excludedQuestionCodes, managedQuestions);
   const blocked = Boolean(access && !access.isPremium && (access.practice.remaining ?? 0) <= 0);
 
   return (

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { isAdminUser } from "@/lib/admin";
 import { getCurrentUser } from "@/lib/supabase-server";
 
 const links = [
@@ -12,6 +13,7 @@ const links = [
 
 export async function Header() {
   const user = await getCurrentUser();
+  const admin = isAdminUser(user);
 
   return (
     <header className="site-header">
@@ -23,6 +25,7 @@ export async function Header() {
           {links.map(([label, href]) => (
             <Link key={href} href={href} className="nav-link">{label}</Link>
           ))}
+          {admin ? <Link href="/admin/questions" className="nav-link">Admin</Link> : null}
           {user ? (
             <>
               <Link href="/account" className="header-user" title="Voir mon accès et mes quotas">

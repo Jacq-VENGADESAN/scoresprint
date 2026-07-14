@@ -11,6 +11,9 @@ ScoreSprint est une plateforme indépendante de préparation adaptative à l’a
 - mini-examen original de 30 questions chronométré ;
 - historique détaillé et statistiques ;
 - 100 questions originales au total ;
+- banque de questions supplémentaire gérée dans Supabase ;
+- espace administrateur pour créer, relire, publier et archiver des questions ;
+- statistiques de réussite par question ;
 - offre gratuite avec quotas contrôlés côté serveur ;
 - accès Premium de 30 ou 90 jours ;
 - Stripe Checkout hébergé pour les paiements uniques ;
@@ -43,9 +46,12 @@ STRIPE_SECRET_KEY=sk_test_...
 STRIPE_WEBHOOK_SECRET=whsec_...
 STRIPE_PRICE_SPRINT_30=price_...
 STRIPE_PRICE_SPRINT_90=price_...
+ADMIN_EMAILS=admin@example.com
 ```
 
 `SUPABASE_SERVICE_ROLE_KEY`, `STRIPE_SECRET_KEY` et `STRIPE_WEBHOOK_SECRET` sont strictement réservées au serveur et ne doivent jamais être préfixées par `NEXT_PUBLIC_` ni commitées dans GitHub.
+
+`ADMIN_EMAILS` contient une ou plusieurs adresses séparées par des virgules. Seuls les comptes Supabase connectés avec ces adresses voient l’onglet Admin et peuvent appeler les routes de gestion du contenu.
 
 ## Initialiser la base Supabase
 
@@ -58,9 +64,24 @@ Dans **Supabase → SQL Editor**, exécuter dans cet ordre :
 5. `20260713223000_progress_analytics.sql` ;
 6. `20260713233000_calibrated_mastery_mini_exams.sql` ;
 7. `20260714113000_free_tier_usage_limits.sql` ;
-8. `20260714173000_stripe_checkout_payments.sql`.
+8. `20260714173000_stripe_checkout_payments.sql` ;
+9. `20260714210000_content_admin_platform.sql`.
 
 La huitième migration complète `subscriptions` et crée `activate_stripe_purchase`, une fonction transactionnelle qui empêche la double activation d’un même paiement et prolonge correctement un accès existant.
+
+La neuvième migration transforme les tables `questions` et `question_options` en catalogue administrable, protège les corrections de tout accès direct, ajoute les champs de contexte et de feedback, puis crée la fonction transactionnelle `save_managed_question`.
+
+## Administration du contenu
+
+Après avoir configuré `ADMIN_EMAILS`, ouvrir :
+
+```text
+/admin/questions
+```
+
+Une question peut rester en brouillon, passer en relecture, être publiée ou archivée. Dès qu’elle est publiée, elle rejoint automatiquement la sélection des séances adaptatives sans nouveau déploiement Vercel.
+
+Chaque modification remplace atomiquement les quatre options et ajoute une entrée dans `question_admin_events`. Les bonnes réponses et explications sont chargées uniquement sur le serveur avec la clé `service_role`.
 
 ## Configuration Stripe
 
@@ -103,14 +124,16 @@ Premium :
 
 Un nouvel achat effectué pendant une période Premium ajoute sa durée après la date d’expiration déjà prévue.
 
-## Sécurité du paiement
+## Sécurité du paiement et du contenu
 
 - les coordonnées bancaires sont saisies sur Stripe Checkout ;
 - aucune donnée de carte n’est stockée dans ScoreSprint ;
 - le Checkout est créé pour l’utilisateur authentifié ;
 - le webhook est vérifié par signature HMAC et horodatage ;
-- la clé Supabase `service_role` n’est utilisée que dans le webhook serveur ;
-- les achats sont idempotents grâce à l’identifiant unique de la Checkout Session.
+- la clé Supabase `service_role` reste uniquement côté serveur ;
+- les achats sont idempotents grâce à l’identifiant unique de la Checkout Session ;
+- les tables contenant les bonnes réponses n’accordent aucun accès direct aux utilisateurs ;
+- chaque route d’administration vérifie l’adresse du compte authentifié.
 
 ## Vérifications
 

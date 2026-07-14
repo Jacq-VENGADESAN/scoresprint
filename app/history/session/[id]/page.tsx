@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getAccessSummary, historyCutoffIso } from "@/lib/access";
+import { getDatabaseQuestionReview } from "@/lib/database-questions";
 import { getPracticeQuestionReview } from "@/lib/practice-catalog";
 import { getCurrentUser, supabaseRest } from "@/lib/supabase-server";
 
@@ -60,6 +61,10 @@ export default async function SessionHistoryPage({ params }: { params: Promise<{
   const attempts = await supabaseRest<Attempt[]>(
     `practice_attempts?select=id,question_code,skill_id,subskill,selected_option,correct_option,is_correct,response_time_ms,mastery_before,mastery_after,created_at&session_id=eq.${encodeURIComponent(id)}&user_id=eq.${user.id}&order=created_at.asc`
   );
+  const reviews = await Promise.all(attempts.map(async (attempt) => (
+    getPracticeQuestionReview(attempt.question_code, attempt.selected_option)
+    ?? await getDatabaseQuestionReview(attempt.question_code, attempt.selected_option)
+  )));
 
   const accuracy = session.total_questions > 0
     ? Math.round((session.correct_answers / session.total_questions) * 100)
@@ -87,7 +92,7 @@ export default async function SessionHistoryPage({ params }: { params: Promise<{
 
       <div className="review-list">
         {attempts.map((attempt, index) => {
-          const review = getPracticeQuestionReview(attempt.question_code, attempt.selected_option);
+          const review = reviews[index];
           const question = review?.question;
           const selectedText = question?.options.find((option) => option.id === attempt.selected_option)?.text ?? attempt.selected_option;
           const correctText = question?.options.find((option) => option.id === attempt.correct_option)?.text ?? attempt.correct_option;

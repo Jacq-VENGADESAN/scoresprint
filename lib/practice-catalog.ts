@@ -26,14 +26,15 @@ export function buildPracticeSession(
   dueQuestionCodes: string[],
   count: number,
   seed: string,
-  excludedQuestionCodes: string[] = []
+  excludedQuestionCodes: string[] = [],
+  supplementalQuestions: PublicPracticeQuestion[] = []
 ): PublicPracticeQuestion[] {
-  const wanted = Math.max(1, Math.min(count, 50));
+  const wanted = Math.max(1, Math.min(count, 100));
   const dueSet = new Set(dueQuestionCodes);
   const excludedSet = new Set(excludedQuestionCodes.filter((code) => !dueSet.has(code)));
   const basePool = buildBasePracticeSession(priorities, dueQuestionCodes, 18, `${seed}-base`);
   const extraPool = extraPracticeQuestions.map(publicQuestion);
-  const allQuestions = [...basePool, ...extraPool];
+  const allQuestions = [...basePool, ...extraPool, ...supplementalQuestions];
   const unique = new Map(allQuestions.map((question) => [question.id, question]));
   const priorityRank = new Map(
     [...priorities]
