@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { getAccessSummary, historyCutoffIso } from "@/lib/access";
 import { getPracticeQuestionReview } from "@/lib/practice-catalog";
 import { getCurrentUser, supabaseRest } from "@/lib/supabase-server";
 
@@ -47,17 +48,18 @@ export default async function SessionHistoryPage({ params }: { params: Promise<{
   const { id } = await params;
   if (!user) redirect(`/auth?next=/history/session/${encodeURIComponent(id)}`);
 
-  const [sessions, attempts] = await Promise.all([
-    supabaseRest<StudySession[]>(
-      `study_sessions?select=id,mode,total_questions,correct_answers,completed_minutes,duration_ms,completed_at&id=eq.${encodeURIComponent(id)}&user_id=eq.${user.id}&limit=1`
-    ),
-    supabaseRest<Attempt[]>(
-      `practice_attempts?select=id,question_code,skill_id,subskill,selected_option,correct_option,is_correct,response_time_ms,mastery_before,mastery_after,created_at&session_id=eq.${encodeURIComponent(id)}&user_id=eq.${user.id}&order=created_at.asc`
-    )
-  ]);
-
+  const access = await getAccessSummary(user.id);
+  const cutoff = historyCutoffIso(access);
+  const dateFilter = cutoff ? `&completed_at=gte.${encodeURIComponent(cutoff)}` : "";
+  const sessions = await supabaseRest<StudySession[]>(
+    `study_sessions?select=id,mode,total_questions,correct_answers,completed_minutes,duration_ms,completed_at&id=eq.${encodeURIComponent(id)}&user_id=eq.${user.id}&completed_at=not.is.null${dateFilter}&limit=1`
+  );
   const session = sessions[0];
   if (!session || !session.completed_at) notFound();
+
+  const attempts = await supabaseRest<Attempt[]>(
+    `practice_attempts?select=id,question_code,skill_id,subskill,selected_option,correct_option,is_correct,response_time_ms,mastery_before,mastery_after,created_at&session_id=eq.${encodeURIComponent(id)}&user_id=eq.${user.id}&order=created_at.asc`
+  );
 
   const accuracy = session.total_questions > 0
     ? Math.round((session.correct_answers / session.total_questions) * 100)
@@ -105,22 +107,10 @@ export default async function SessionHistoryPage({ params }: { params: Promise<{
               <h2>{question?.prompt ?? `Question ${attempt.question_code}`}</h2>
 
               <div className="review-answer-grid">
-                <div>
-                  <span>Ta réponse</span>
-                  <strong>{attempt.selected_option}. {selectedText}</strong>
-                </div>
-                <div>
-                  <span>Bonne réponse</span>
-                  <strong>{attempt.correct_option}. {correctText}</strong>
-                </div>
-                <div>
-                  <span>Temps</span>
-                  <strong>{formatDuration(attempt.response_time_ms)}</strong>
-                </div>
-                <div>
-                  <span>Maîtrise</span>
-                  <strong>{Math.round(Number(attempt.mastery_before))}% → {Math.round(Number(attempt.mastery_after))}%</strong>
-                </div>
+                <div><span>Ta réponse</span><strong>{attempt.selected_option}. {selectedText}</strong></div>
+                <div><span>Bonne réponse</span><strong>{attempt.correct_option}. {correctText}</strong></div>
+                <div><span>Temps</span><strong>{formatDuration(attempt.response_time_ms)}</strong></div>
+                <div><span>Maîtrise</span><strong>{Math.round(Number(attempt.mastery_before))}% → {Math.round(Number(attempt.mastery_after))}%</strong></div>
               </div>
 
               {review ? (
