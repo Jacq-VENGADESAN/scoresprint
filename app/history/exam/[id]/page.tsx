@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { getAccessSummary, historyCutoffIso } from "@/lib/access";
 import { getPublicMiniExamQuestions } from "@/lib/mini-exam-bank";
 import { getCurrentUser, supabaseRest } from "@/lib/supabase-server";
 
@@ -46,17 +47,18 @@ export default async function ExamHistoryPage({ params }: { params: Promise<{ id
   const { id } = await params;
   if (!user) redirect(`/auth?next=/history/exam/${encodeURIComponent(id)}`);
 
-  const [runs, answers] = await Promise.all([
-    supabaseRest<MiniExamRun[]>(
-      `mini_exam_runs?select=id,correct_answers,total_questions,estimated_score,score_low,score_high,duration_ms,section_breakdown,completed_at&id=eq.${encodeURIComponent(id)}&user_id=eq.${user.id}&limit=1`
-    ),
-    supabaseRest<MiniExamAnswer[]>(
-      `mini_exam_answers?select=id,question_code,part,skill_id,selected_option,correct_option,is_correct,response_time_ms&run_id=eq.${encodeURIComponent(id)}&user_id=eq.${user.id}&order=question_code.asc`
-    )
-  ]);
-
+  const access = await getAccessSummary(user.id);
+  const cutoff = historyCutoffIso(access);
+  const dateFilter = cutoff ? `&completed_at=gte.${encodeURIComponent(cutoff)}` : "";
+  const runs = await supabaseRest<MiniExamRun[]>(
+    `mini_exam_runs?select=id,correct_answers,total_questions,estimated_score,score_low,score_high,duration_ms,section_breakdown,completed_at&id=eq.${encodeURIComponent(id)}&user_id=eq.${user.id}${dateFilter}&limit=1`
+  );
   const run = runs[0];
   if (!run) notFound();
+
+  const answers = await supabaseRest<MiniExamAnswer[]>(
+    `mini_exam_answers?select=id,question_code,part,skill_id,selected_option,correct_option,is_correct,response_time_ms&run_id=eq.${encodeURIComponent(id)}&user_id=eq.${user.id}&order=question_code.asc`
+  );
 
   const questionMap = new Map(getPublicMiniExamQuestions().map((question) => [question.id, question]));
   const accuracy = run.total_questions > 0 ? Math.round((run.correct_answers / run.total_questions) * 100) : 0;
@@ -107,18 +109,9 @@ export default async function ExamHistoryPage({ params }: { params: Promise<{ id
               <h2>{question?.prompt ?? `Question ${answer.question_code}`}</h2>
 
               <div className="review-answer-grid review-answer-grid-exam">
-                <div>
-                  <span>Ta réponse</span>
-                  <strong>{answer.selected_option || "—"}. {selectedText || "Aucune réponse"}</strong>
-                </div>
-                <div>
-                  <span>Bonne réponse</span>
-                  <strong>{answer.correct_option}. {correctText}</strong>
-                </div>
-                <div>
-                  <span>Temps</span>
-                  <strong>{formatDuration(answer.response_time_ms)}</strong>
-                </div>
+                <div><span>Ta réponse</span><strong>{answer.selected_option || "—"}. {selectedText || "Aucune réponse"}</strong></div>
+                <div><span>Bonne réponse</span><strong>{answer.correct_option}. {correctText}</strong></div>
+                <div><span>Temps</span><strong>{formatDuration(answer.response_time_ms)}</strong></div>
               </div>
 
               {!answer.is_correct ? (
