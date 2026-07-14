@@ -25,7 +25,9 @@ export async function Header() {
           ))}
           {user ? (
             <>
-              <span className="header-user">{user.user_metadata?.display_name ?? user.email ?? "Mon compte"}</span>
+              <Link href="/account" className="header-user" title="Voir mon accès et mes quotas">
+                {user.user_metadata?.display_name ?? user.email ?? "Mon accès"}
+              </Link>
               <form action="/api/auth/logout" method="post">
                 <button className="btn btn-secondary compact-btn" type="submit">Déconnexion</button>
               </form>

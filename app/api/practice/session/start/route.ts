@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getAccessSummary } from "@/lib/access";
 import { getCurrentUser, supabaseRest } from "@/lib/supabase-server";
 
 type RequestBody = {
@@ -29,6 +30,18 @@ export async function POST(request: Request) {
   }
 
   try {
+    const access = await getAccessSummary(user.id);
+    if (!access.isPremium && (access.practice.remaining ?? 0) <= 0) {
+      return NextResponse.json(
+        {
+          code: "UPGRADE_REQUIRED",
+          error: "La séance gratuite du jour a déjà été utilisée. Ton prochain quota sera disponible demain.",
+          upgradeUrl: "/pricing"
+        },
+        { status: 402 }
+      );
+    }
+
     const rows = await supabaseRest<Array<{ id: string; started_at: string }>>("study_sessions", {
       method: "POST",
       headers: { Prefer: "return=representation" },
@@ -51,7 +64,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("Unable to start practice session", error);
     return NextResponse.json(
-      { error: "La séance n’a pas pu être créée. Vérifie la migration des statistiques." },
+      { error: "La séance n’a pas pu être créée. Vérifie la migration des quotas gratuits." },
       { status: 500 }
     );
   }

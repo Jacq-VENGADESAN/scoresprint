@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { getAccessSummary, historyCutoffIso, type AccessSummary } from "@/lib/access";
 import { getCurrentUser, supabaseRest } from "@/lib/supabase-server";
 
 type StudySession = {
@@ -58,17 +59,27 @@ export default async function HistoryPage() {
 
   let items: HistoryItem[] = [];
   let ready = true;
+  let accessReady = true;
+  let access: AccessSummary | null = null;
 
   try {
+    access = await getAccessSummary(user.id);
+  } catch {
+    accessReady = false;
+  }
+
+  try {
+    const cutoff = access ? historyCutoffIso(access) : null;
+    const dateFilter = cutoff ? `&completed_at=gte.${encodeURIComponent(cutoff)}` : "";
     const [sessions, exams, diagnostics] = await Promise.all([
       supabaseRest<StudySession[]>(
-        `study_sessions?select=id,mode,total_questions,correct_answers,completed_minutes,completed_at&user_id=eq.${user.id}&completed_at=not.is.null&order=completed_at.desc&limit=30`
+        `study_sessions?select=id,mode,total_questions,correct_answers,completed_minutes,completed_at&user_id=eq.${user.id}&completed_at=not.is.null${dateFilter}&order=completed_at.desc&limit=50`
       ),
       supabaseRest<MiniExamRun[]>(
-        `mini_exam_runs?select=id,correct_answers,total_questions,estimated_score,score_low,score_high,duration_ms,completed_at&user_id=eq.${user.id}&order=completed_at.desc&limit=20`
+        `mini_exam_runs?select=id,correct_answers,total_questions,estimated_score,score_low,score_high,duration_ms,completed_at&user_id=eq.${user.id}${dateFilter}&order=completed_at.desc&limit=30`
       ),
       supabaseRest<DiagnosticRun[]>(
-        `diagnostic_runs?select=id,correct_answers,total_questions,estimated_score,score_low,score_high,completed_at&user_id=eq.${user.id}&order=completed_at.desc&limit=10`
+        `diagnostic_runs?select=id,correct_answers,total_questions,estimated_score,score_low,score_high,completed_at&user_id=eq.${user.id}${dateFilter}&order=completed_at.desc&limit=20`
       )
     ]);
 
@@ -112,7 +123,18 @@ export default async function HistoryPage() {
         <p>Les séances et mini-examens peuvent être ouverts pour revoir les questions, tes choix, les bonnes réponses et le temps passé.</p>
       </header>
 
+      {access && !access.isPremium ? (
+        <div className="quota-strip">
+          <strong>Compte gratuit</strong>
+          <span>Historique limité aux {access.historyDays} derniers jours</span>
+          <a href="/pricing">Débloquer l’historique complet →</a>
+        </div>
+      ) : access?.isPremium ? (
+        <div className="quota-strip quota-strip-premium"><strong>Premium</strong><span>Historique complet activé</span></div>
+      ) : null}
+
       {!ready ? <div className="alert alert-warning">L’historique n’est pas accessible. Vérifie que les dernières migrations Supabase ont été exécutées.</div> : null}
+      {!accessReady ? <div className="alert alert-warning">La migration des quotas gratuits n’est pas encore accessible.</div> : null}
 
       <section className="card panel history-summary">
         <div>
@@ -156,8 +178,8 @@ export default async function HistoryPage() {
         </div>
       ) : (
         <section className="card empty-state">
-          <h2>Aucune activité enregistrée.</h2>
-          <p className="muted-copy">Termine une séance ou un mini-examen pour commencer ton historique.</p>
+          <h2>Aucune activité visible dans cette période.</h2>
+          <p className="muted-copy">Termine une séance ou un mini-examen pour alimenter ton historique.</p>
           <Link href="/practice" className="btn btn-primary">Démarrer une séance</Link>
         </section>
       )}

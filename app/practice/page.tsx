@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
 import { PracticeRunner } from "@/components/practice-runner";
+import { UpgradeGate } from "@/components/upgrade-gate";
+import { getAccessSummary, type AccessSummary } from "@/lib/access";
 import { buildPracticeSession } from "@/lib/practice-catalog";
 import { getCurrentUser, supabaseRest } from "@/lib/supabase-server";
 
@@ -33,6 +35,14 @@ export default async function PracticePage({ searchParams }: { searchParams: Pro
   let errorRows: ErrorRow[] = [];
   let recentAttempts: RecentAttemptRow[] = [];
   let practiceReady = true;
+  let accessReady = true;
+  let access: AccessSummary | null = null;
+
+  try {
+    access = await getAccessSummary(user.id);
+  } catch {
+    accessReady = false;
+  }
 
   try {
     const fourteenDaysAgo = new Date(Date.now() - 14 * 86_400_000).toISOString();
@@ -69,6 +79,7 @@ export default async function PracticePage({ searchParams }: { searchParams: Pro
   const questions = reviewMode && dueQuestionCodes.length === 0
     ? []
     : buildPracticeSession(priorities, dueQuestionCodes, questionCount, seed, excludedQuestionCodes);
+  const blocked = Boolean(access && !access.isPremium && (access.practice.remaining ?? 0) <= 0);
 
   return (
     <div className="container">
@@ -82,13 +93,34 @@ export default async function PracticePage({ searchParams }: { searchParams: Pro
         </p>
       </header>
 
+      {access && !access.isPremium ? (
+        <div className="quota-strip">
+          <strong>Compte gratuit</strong>
+          <span>{access.practice.used}/{access.practice.limit} séance utilisée aujourd’hui</span>
+          <a href="/pricing">Débloquer les séances illimitées →</a>
+        </div>
+      ) : access?.isPremium ? (
+        <div className="quota-strip quota-strip-premium"><strong>Premium</strong><span>Séances illimitées activées</span></div>
+      ) : null}
+
       {!practiceReady ? (
         <div className="alert alert-warning">
           Les migrations de l’entraînement ou des statistiques ne sont pas encore accessibles. Exécute les nouveaux scripts SQL avant de répondre.
         </div>
       ) : null}
+      {!accessReady ? (
+        <div className="alert alert-warning">La migration des quotas gratuits n’est pas encore accessible. Exécute le nouveau script SQL.</div>
+      ) : null}
 
-      <PracticeRunner questions={questions} reviewMode={reviewMode} plannedMinutes={dailyMinutes} />
+      {blocked ? (
+        <UpgradeGate
+          title="Ta séance gratuite du jour est terminée."
+          message="Le compte gratuit comprend une séance adaptative ou une révision d’erreurs par jour. Premium supprime cette limite."
+          resetMessage="Ton quota gratuit sera réinitialisé demain."
+        />
+      ) : accessReady ? (
+        <PracticeRunner questions={questions} reviewMode={reviewMode} plannedMinutes={dailyMinutes} />
+      ) : null}
     </div>
   );
 }

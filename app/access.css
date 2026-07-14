@@ -1,0 +1,36 @@
+.header-user { text-decoration: none; }
+.quota-strip { display: flex; align-items: center; gap: 14px; margin: -28px 0 24px; padding: 13px 16px; border: 1px solid #dcd5ff; border-radius: 16px; background: #f5f2ff; color: #372685; }
+.quota-strip strong { color: var(--brand); }
+.quota-strip span { color: var(--muted); }
+.quota-strip a { margin-left: auto; color: var(--brand); font-weight: 800; text-decoration: none; }
+.quota-strip-premium { border-color: #a9e3cf; background: #effbf6; color: #176c50; }
+.upgrade-gate { max-width: 860px; margin: 0 auto 72px; padding: clamp(28px, 5vw, 46px); display: flex; align-items: center; justify-content: space-between; gap: 28px; }
+.upgrade-gate h2 { margin: 8px 0 10px; font-size: clamp(1.8rem, 4vw, 2.7rem); letter-spacing: -.035em; }
+.upgrade-gate-actions { display: grid; gap: 10px; min-width: 245px; }
+.quota-reset-note { display: inline-flex; margin-top: 14px; padding: 9px 12px; border-radius: 12px; background: var(--soft); color: var(--muted); font-size: .88rem; font-weight: 700; }
+.account-page { padding-bottom: 80px; }
+.account-plan-card { display: flex; align-items: center; justify-content: space-between; gap: 28px; padding: clamp(26px, 5vw, 42px); margin-bottom: 22px; background: linear-gradient(135deg, #f6f3ff, #fff); }
+.account-plan-card h2 { margin: 12px 0 8px; font-size: clamp(1.7rem, 3vw, 2.4rem); }
+.account-plan-premium { background: linear-gradient(135deg, #edfff7, #fff); }
+.account-usage-panel { margin-bottom: 22px; }
+.usage-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.usage-card { padding: 18px; border: 1px solid var(--line); border-radius: 17px; background: var(--soft); }
+.usage-card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.usage-card-head span { font-weight: 900; color: var(--brand); }
+.usage-card small { display: block; margin-top: 9px; color: var(--muted); }
+.usage-meter { height: 8px; margin-top: 16px; overflow: hidden; border-radius: 99px; background: #e2e5ee; }
+.usage-meter div { height: 100%; border-radius: inherit; background: var(--brand); }
+.billing-foundation-note { display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+.billing-foundation-note h2 { margin: 0 0 7px; }
+.pricing-status-note { margin: -24px 0 26px; padding: 14px 16px; border-radius: 15px; background: #fff8e8; color: #76530a; font-weight: 700; }
+.price-card .plan-kicker { display: inline-flex; margin-bottom: 10px; color: var(--brand); font-size: .78rem; font-weight: 900; text-transform: uppercase; letter-spacing: .08em; }
+.price-card .btn-disabled { opacity: .65; cursor: not-allowed; pointer-events: none; }
+
+@media (max-width: 760px) {
+  .quota-strip, .account-plan-card, .billing-foundation-note, .upgrade-gate { align-items: stretch; flex-direction: column; }
+  .quota-strip { margin-top: -16px; }
+  .quota-strip a { margin-left: 0; }
+  .usage-grid { grid-template-columns: 1fr; }
+  .upgrade-gate-actions { min-width: 0; }
+  .upgrade-gate-actions .btn, .account-plan-card .btn, .billing-foundation-note .btn { width: 100%; }
+}

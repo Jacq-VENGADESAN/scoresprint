@@ -4,6 +4,7 @@ import {
   evaluateMiniExam,
   type MiniExamAnswerInput
 } from "@/lib/mini-exam-bank";
+import { consumeFreeUsage, FREE_LIMITS, getAccessSummary } from "@/lib/access";
 import { buildExamScoreSnapshot, updateCalibratedMastery } from "@/lib/measurement";
 import { getCurrentUser, supabaseRest } from "@/lib/supabase-server";
 
@@ -57,6 +58,25 @@ export async function POST(request: Request) {
   const score = buildExamScoreSnapshot(evaluation.correctAnswers, evaluation.totalQuestions);
 
   try {
+    const access = await getAccessSummary(user.id);
+    if (!access.isPremium) {
+      const consumed = await consumeFreeUsage(
+        "mini_exam",
+        access.miniExam.periodStart,
+        FREE_LIMITS.miniExamsPerMonth
+      );
+      if (!consumed.allowed) {
+        return NextResponse.json(
+          {
+            code: "UPGRADE_REQUIRED",
+            error: "Le mini-examen gratuit de ce mois a déjà été utilisé. Passe à Premium pour en lancer sans limite.",
+            upgradeUrl: "/pricing"
+          },
+          { status: 402 }
+        );
+      }
+    }
+
     const runs = await supabaseRest<Array<{ id: string }>>("mini_exam_runs", {
       method: "POST",
       headers: { Prefer: "return=representation" },
@@ -186,7 +206,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("Unable to persist mini exam", error);
     return NextResponse.json(
-      { error: "Le mini-examen n’a pas pu être enregistré. Vérifie la migration de calibration et des mini-examens." },
+      { error: "Le mini-examen n’a pas pu être enregistré. Vérifie la migration des quotas gratuits." },
       { status: 500 }
     );
   }
