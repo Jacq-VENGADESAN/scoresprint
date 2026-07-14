@@ -76,7 +76,7 @@ export async function getAccessSummary(userId: string, now = new Date()): Promis
       `subscriptions?select=plan_code,status,access_starts_at,access_ends_at&user_id=eq.${userId}&order=access_ends_at.desc.nullslast,created_at.desc&limit=10`
     ),
     supabaseRest<UsageRow[]>(
-      `usage_counters?select=metric,period_start,usage_count&user_id=eq.${userId}&or=(and(metric.eq.practice_session,period_start.eq.${periods.practice}),and(metric.eq.mini_exam,period_start.eq.${periods.miniExam}))`
+      `usage_counters?select=metric,period_start,usage_count&user_id=eq.${userId}&order=period_start.desc&limit=100`
     )
   ]);
 
