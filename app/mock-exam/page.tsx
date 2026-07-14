@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { MiniExamRunner } from "@/components/mini-exam-runner";
 import { UpgradeGate } from "@/components/upgrade-gate";
-import { getAccessSummary } from "@/lib/access";
+import { getAccessSummary, type AccessSummary } from "@/lib/access";
 import { getPublicMiniExamQuestions } from "@/lib/mini-exam-bank";
 import { getCurrentUser } from "@/lib/supabase-server";
 
@@ -9,7 +9,7 @@ export default async function MockExamPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/auth?next=/mock-exam");
 
-  let access = null;
+  let access: AccessSummary | null = null;
   let accessReady = true;
   try {
     access = await getAccessSummary(user.id);
