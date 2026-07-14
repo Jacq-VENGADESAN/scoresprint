@@ -1,0 +1,18 @@
+.billing-result-page { padding: 72px 0 96px; }
+.billing-result-card { max-width: 820px; margin: 0 auto; padding: clamp(30px, 6vw, 56px); }
+.billing-result-card h1 { margin: 10px 0 14px; font-size: clamp(2.1rem, 5vw, 3.7rem); letter-spacing: -.045em; }
+.billing-result-card > p { max-width: 680px; color: var(--muted); line-height: 1.7; }
+.billing-result-status { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 28px 0; }
+.billing-result-status > div { padding: 17px; border: 1px solid var(--line); border-radius: 16px; background: var(--soft); }
+.billing-result-status span { display: block; margin-bottom: 7px; color: var(--muted); font-size: .82rem; }
+.billing-result-status strong { display: block; }
+.billing-result-actions, .account-billing-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.billing-secure-note { margin: 24px auto 70px; max-width: 760px; text-align: center; color: var(--muted); font-size: .9rem; }
+.pricing-status-error { background: #fff0f1; color: #8e2630; }
+
+@media (max-width: 720px) {
+  .billing-result-status { grid-template-columns: 1fr; }
+  .billing-result-actions, .account-billing-actions { flex-direction: column; }
+  .billing-result-actions .btn, .account-billing-actions .btn, .account-billing-actions form { width: 100%; }
+  .account-billing-actions button { width: 100%; }
+}

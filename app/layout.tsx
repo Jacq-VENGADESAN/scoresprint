@@ -5,6 +5,7 @@ import "./progress.css";
 import "./exam.css";
 import "./history.css";
 import "./access.css";
+import "./billing.css";
 import { Header } from "@/components/header";
 
 export const metadata: Metadata = {
