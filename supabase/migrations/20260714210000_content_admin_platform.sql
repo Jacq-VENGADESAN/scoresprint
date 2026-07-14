@@ -96,7 +96,7 @@ security definer
 set search_path = ''
 as $$
 declare
-  question_id uuid;
+  saved_question_id uuid;
   previous_status public.question_status;
   option_count integer;
   correct_count integer;
@@ -123,7 +123,8 @@ begin
     raise exception 'MISSING_QUESTION_FIELD';
   end if;
 
-  select count(*), count(*) filter (where coalesce((item->>'isCorrect')::boolean, false))
+  select count(*)::integer,
+         count(*) filter (where coalesce((item->>'isCorrect')::boolean, false))::integer
   into option_count, correct_count
   from jsonb_array_elements(coalesce(p_options, '[]'::jsonb)) as item;
 
@@ -140,7 +141,7 @@ begin
       trim(p_prompt), nullif(trim(coalesce(p_context, '')), ''), trim(p_explanation),
       nullif(trim(coalesce(p_trap, '')), ''), p_status, p_target_time_ms,
       case when p_status = 'published' then now() else null end
-    ) returning id into question_id;
+    ) returning id into saved_question_id;
     audit_action := case when p_status = 'published' then 'published' else 'created' end;
   else
     select status into previous_status
@@ -166,7 +167,7 @@ begin
       target_time_ms = p_target_time_ms
     where id = p_question_id;
 
-    question_id := p_question_id;
+    saved_question_id := p_question_id;
     audit_action := case
       when previous_status <> 'published' and p_status = 'published' then 'published'
       when previous_status = 'published' and p_status <> 'published' then 'unpublished'
@@ -175,11 +176,12 @@ begin
     end;
   end if;
 
-  delete from public.question_options where question_id = save_managed_question.question_id;
+  delete from public.question_options
+  where question_options.question_id = saved_question_id;
 
   insert into public.question_options (question_id, option_key, option_text, is_correct, feedback)
   select
-    question_id,
+    saved_question_id,
     upper(trim(item->>'key')),
     trim(item->>'text'),
     coalesce((item->>'isCorrect')::boolean, false),
@@ -188,7 +190,7 @@ begin
 
   if exists (
     select 1 from public.question_options
-    where question_id = save_managed_question.question_id
+    where question_options.question_id = saved_question_id
       and option_key not in ('A', 'B', 'C', 'D')
   ) then
     raise exception 'INVALID_OPTION_KEY';
@@ -197,14 +199,14 @@ begin
   insert into public.question_admin_events (
     question_id, question_code, admin_email, action, details
   ) values (
-    question_id,
+    saved_question_id,
     normalized_code,
     lower(trim(p_admin_email)),
     audit_action,
     jsonb_build_object('status', p_status, 'part', p_part, 'skill_id', p_skill_id)
   );
 
-  return question_id;
+  return saved_question_id;
 end;
 $$;
 
