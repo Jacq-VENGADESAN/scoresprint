@@ -7,6 +7,7 @@ import "./history.css";
 import "./access.css";
 import "./billing.css";
 import "./admin.css";
+import "./admin-quality.css";
 import { Header } from "@/components/header";
 
 export const metadata: Metadata = {
