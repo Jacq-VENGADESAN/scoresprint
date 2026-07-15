@@ -1,5 +1,7 @@
+import Link from "next/link";
+
 type AuthPageProps = {
-  searchParams: Promise<{ error?: string; next?: string; confirmed?: string }>;
+  searchParams: Promise<{ error?: string; next?: string; confirmed?: string; password?: string }>;
 };
 
 function CheckIcon() {
@@ -32,6 +34,7 @@ export default async function AuthPage({ searchParams }: AuthPageProps) {
 
           {params.error ? <div className="alert alert-error">{params.error}</div> : null}
           {params.confirmed ? <div className="alert alert-success">Ton e-mail est confirmé. Tu peux maintenant te connecter.</div> : null}
+          {params.password === "updated" ? <div className="alert alert-success">Ton nouveau mot de passe est enregistré. Tu peux te connecter.</div> : null}
 
           <div className="auth-grid">
             <section className="card auth-card" aria-labelledby="login-title">
@@ -43,7 +46,10 @@ export default async function AuthPage({ searchParams }: AuthPageProps) {
                   <input id="login-email" name="email" type="email" autoComplete="email" inputMode="email" required />
                 </div>
                 <div className="field">
-                  <label htmlFor="login-password">Mot de passe</label>
+                  <div className="field-label-row">
+                    <label htmlFor="login-password">Mot de passe</label>
+                    <Link href="/auth/forgot-password">Mot de passe oublié ?</Link>
+                  </div>
                   <input id="login-password" name="password" type="password" autoComplete="current-password" minLength={6} required />
                 </div>
                 <button className="btn btn-primary" type="submit">Se connecter</button>
