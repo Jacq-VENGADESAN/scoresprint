@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { QuestionReportButton } from "@/components/question-report-button";
 import type { PublicPracticeQuestion } from "@/lib/practice-bank";
 
@@ -178,11 +178,34 @@ export function PracticeRunner({
     questionStartedAt.current = Date.now();
   }
 
+  useEffect(() => {
+    function handleKeyboard(event: KeyboardEvent) {
+      const target = event.target as HTMLElement | null;
+      if (target?.matches("input, textarea, select, button") || event.metaKey || event.ctrlKey || event.altKey) return;
+
+      const optionKey = event.key.toUpperCase();
+      if (!result && question && ["A", "B", "C", "D"].includes(optionKey)) {
+        const option = question.options.find((item) => item.id === optionKey);
+        if (option) setSelected(option.id);
+        return;
+      }
+
+      if (event.key === "Enter" && !loading) {
+        if (result) nextQuestion();
+        else if (selected) void submitAnswer();
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyboard);
+    return () => window.removeEventListener("keydown", handleKeyboard);
+  });
+
   if (questions.length === 0) {
     return (
-      <section className="card question-shell centered-session">
-        <h2>Aucune question n’est disponible pour cette séance.</h2>
-        <p className="muted-copy">Termine d’abord le diagnostic ou reviens lorsqu’une erreur sera prête à être révisée.</p>
+      <section className="card exam-intro centered-session">
+        <div className="eyebrow">Séance indisponible</div>
+        <h2>Aucune question n’est prête à être révisée.</h2>
+        <p className="muted-copy">Termine d’abord le diagnostic ou reviens lorsqu’une erreur arrivera à échéance.</p>
         <Link href="/dashboard" className="btn btn-primary">Retour au tableau de bord</Link>
       </section>
     );
@@ -191,12 +214,12 @@ export function PracticeRunner({
   if (finished) {
     const accuracy = summary?.accuracy ?? Math.round((correctCount / questions.length) * 100);
     return (
-      <section className="card question-shell session-summary">
+      <section className="card question-shell session-summary" aria-live="polite">
         <div className="eyebrow">Séance enregistrée</div>
         <h2>{correctCount}/{questions.length} réponses correctes</h2>
         <p className="muted-copy">
-          Tes maîtrises, ton carnet d’erreurs et ton estimation de score ont été mis à jour progressivement.
-          {weakestSessionSkill ? ` Pendant cette séance, ${weakestSessionSkill} reste la priorité principale.` : ""}
+          Tes maîtrises, ton carnet d’erreurs et ton estimation de score ont été mis à jour.
+          {weakestSessionSkill ? ` ${weakestSessionSkill} reste la priorité principale après cette séance.` : ""}
         </p>
         <div className="stats session-summary-stats">
           <div className="stat"><div className="stat-label">Réussite</div><div className="stat-value">{accuracy}%</div></div>
@@ -221,66 +244,76 @@ export function PracticeRunner({
       <div className="session-progress" aria-label={`Progression : question ${index + 1} sur ${questions.length}`}>
         <div className="session-progress-fill" style={{ width: `${Math.max(4, progress)}%` }} />
       </div>
-      <div className="question-meta">
-        <span className="badge">Partie {question.part}</span>
-        <span className="badge">{question.skillLabel}</span>
-        <span className="badge">Question {index + 1} / {questions.length}</span>
-      </div>
-      <div className="question-subskill">{question.subskill} · difficulté {question.difficulty}/5</div>
-      {question.context ? <div className="reading-context">{question.context}</div> : null}
-      <div className="question-text">{question.prompt}</div>
-
-      <div className="options">
-        {question.options.map((option) => {
-          const classes = ["option"];
-          if (selected === option.id) classes.push("selected");
-          if (result && option.id === result.correctOptionId) classes.push("correct");
-          if (result && selected === option.id && !result.isCorrect) classes.push("wrong");
-          return (
-            <button
-              type="button"
-              key={option.id}
-              className={classes.join(" ")}
-              disabled={Boolean(result) || loading}
-              onClick={() => setSelected(option.id)}
-              aria-pressed={selected === option.id}
-            >
-              <strong style={{ marginRight: 10 }}>{option.id}.</strong>{option.text}
-            </button>
-          );
-        })}
-      </div>
-
-      {error ? <div className="alert alert-error" style={{ marginTop: 18 }}>{error}</div> : null}
-
-      {result ? (
-        <>
-          <div className={`answer-feedback ${result.isCorrect ? "answer-feedback-correct" : "answer-feedback-wrong"}`}>
-            <h3>{result.isCorrect ? "Bonne réponse." : `La bonne réponse était ${result.correctOptionId}.`}</h3>
-            <p><strong>Pourquoi ton choix :</strong> {result.selectedFeedback}</p>
-            <p><strong>Règle à retenir :</strong> {result.explanation}</p>
-            <p><strong>Piège :</strong> {result.trap}</p>
-            <div className="mastery-change">
-              Maîtrise estimée : <strong>{Math.round(result.masteryBefore)}% → {Math.round(result.masteryAfter)}%</strong>
-              <div className="score-confidence">Confiance {result.confidence} · {result.evidenceCount} réponses observées</div>
-            </div>
-            {result.resolved ? <div className="review-note">Cette erreur est désormais considérée comme maîtrisée.</div> : null}
-            {reviewDate ? <div className="review-note">Prochaine révision prévue le {reviewDate}.</div> : null}
+      <div className="question-body">
+        <div className="question-header">
+          <div className="question-meta">
+            <span className="badge">Partie {question.part}</span>
+            <span className="badge">{question.skillLabel}</span>
+            <span className="badge">Difficulté {question.difficulty}/5</span>
           </div>
-          <QuestionReportButton questionCode={question.id} selectedOption={selected} />
-        </>
-      ) : null}
+          <span className="question-counter">Question {index + 1} sur {questions.length}</span>
+        </div>
+        <div className="question-subskill">{question.subskill}</div>
+        {question.context ? <div className="reading-context">{question.context}</div> : null}
+        <div className="question-text">{question.prompt}</div>
 
-      <div className="question-actions">
+        <div className="options" role="group" aria-label="Choix de réponse">
+          {question.options.map((option) => {
+            const classes = ["option"];
+            if (selected === option.id) classes.push("selected");
+            if (result && option.id === result.correctOptionId) classes.push("correct");
+            if (result && selected === option.id && !result.isCorrect) classes.push("wrong");
+            return (
+              <button
+                type="button"
+                key={option.id}
+                className={classes.join(" ")}
+                disabled={Boolean(result) || loading}
+                onClick={() => setSelected(option.id)}
+                aria-pressed={selected === option.id}
+              >
+                <span className="option-letter">{option.id}</span>
+                <span className="option-copy">{option.text}</span>
+                <span className="option-shortcut">Touche {option.id}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {error ? <div className="alert alert-error" style={{ marginTop: 18 }}>{error}</div> : null}
+
         {result ? (
-          <button type="button" className="btn btn-primary" disabled={loading} onClick={nextQuestion}>
-            {loading ? "Enregistrement…" : index === questions.length - 1 ? "Terminer la séance" : "Question suivante"}
-          </button>
-        ) : (
-          <button type="button" className="btn btn-primary" disabled={!selected || loading} onClick={submitAnswer}>
-            {loading ? "Correction…" : "Vérifier ma réponse"}
-          </button>
-        )}
+          <div aria-live="polite">
+            <div className={`answer-feedback ${result.isCorrect ? "answer-feedback-correct" : "answer-feedback-wrong"}`}>
+              <h3>{result.isCorrect ? "Bonne réponse." : `La bonne réponse était ${result.correctOptionId}.`}</h3>
+              <div className="feedback-grid">
+                <div className="feedback-block"><strong>Ton choix</strong>{result.selectedFeedback}</div>
+                <div className="feedback-block"><strong>Règle à retenir</strong>{result.explanation}</div>
+              </div>
+              <p><strong>Piège fréquent :</strong> {result.trap}</p>
+              <div className="mastery-change">
+                Maîtrise estimée : <strong>{Math.round(result.masteryBefore)}% → {Math.round(result.masteryAfter)}%</strong>
+                <div className="score-confidence">Confiance {result.confidence} · {result.evidenceCount} réponses observées</div>
+              </div>
+              {result.resolved ? <div className="review-note">Cette erreur est désormais considérée comme maîtrisée.</div> : null}
+              {reviewDate ? <div className="review-note">Prochaine révision prévue le {reviewDate}.</div> : null}
+            </div>
+            <QuestionReportButton questionCode={question.id} selectedOption={selected} />
+          </div>
+        ) : null}
+
+        <div className="question-actions">
+          <span className="question-action-hint">Utilise A–D pour choisir, puis Entrée pour continuer.</span>
+          {result ? (
+            <button type="button" className="btn btn-primary" disabled={loading} onClick={nextQuestion}>
+              {loading ? "Enregistrement…" : index === questions.length - 1 ? "Terminer la séance" : "Question suivante"}
+            </button>
+          ) : (
+            <button type="button" className="btn btn-primary" disabled={!selected || loading} onClick={submitAnswer}>
+              {loading ? "Correction…" : "Vérifier ma réponse"}
+            </button>
+          )}
+        </div>
       </div>
     </section>
   );
