@@ -45,10 +45,16 @@
 .usage-card-head span { color: var(--brand); font-size: .84rem; }
 .billing-foundation-note { padding: 25px; border-radius: 16px; }
 .account-billing-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.account-billing-actions form { margin: 0; }
 
-.history-summary { padding: 24px; margin-bottom: 18px; }
+.history-summary { padding: 24px; margin-bottom: 14px; }
 .history-summary h2 { margin: 6px 0 0; letter-spacing: -.035em; }
 .history-summary-actions { display: flex; flex-wrap: wrap; gap: 9px; }
+.history-filter-tabs { display: flex; flex-wrap: wrap; gap: 7px; margin: 0 0 16px; }
+.history-filter-tabs a { min-height: 38px; display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 9px; color: var(--muted-strong); background: rgba(255,255,255,.62); font-size: .82rem; font-weight: 720; }
+.history-filter-tabs a:hover { border-color: var(--line-strong); background: var(--surface); }
+.history-filter-tabs a.active { color: #fff; border-color: var(--ink); background: var(--ink); }
+.history-filter-tabs span { min-width: 22px; padding: 2px 6px; border-radius: 6px; color: inherit; background: rgba(128,128,128,.12); font-size: .68rem; text-align: center; }
 .history-list { gap: 9px; }
 .history-row { grid-template-columns: 94px minmax(0,1fr) auto; gap: 18px; padding: 18px 20px; }
 .history-kind { min-width: 82px; padding: 7px 9px; border-radius: 8px; font-size: .7rem; font-weight: 820; }
@@ -89,7 +95,11 @@
   .diagnostic-actions .btn { width: 100%; }
   .account-plan-card, .billing-foundation-note, .upgrade-gate { align-items: stretch; flex-direction: column; }
   .account-plan-card .btn, .billing-foundation-note .btn, .upgrade-gate .btn { width: 100%; }
+  .account-billing-actions { flex-direction: column; }
+  .account-billing-actions form, .account-billing-actions .btn { width: 100%; }
   .history-summary { align-items: stretch; flex-direction: column; }
   .history-summary-actions { flex-direction: column; }
   .history-summary-actions .btn { width: 100%; }
+  .history-filter-tabs { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; }
+  .history-filter-tabs a { flex: 0 0 auto; }
 }
