@@ -5,12 +5,24 @@ import { getAccessSummary, type AccessSummary } from "@/lib/access";
 import { getPublicPublishedDatabaseQuestions } from "@/lib/database-questions";
 import { buildPracticeSession } from "@/lib/practice-catalog";
 import type { PublicPracticeQuestion } from "@/lib/practice-bank";
+import type { PracticeDraftState, SessionDraftRow } from "@/lib/session-drafts";
 import { getCurrentUser, supabaseRest } from "@/lib/supabase-server";
 
 type Goal = { daily_minutes: number };
 type MasteryRow = { skill_id: string; mastery: number | string };
 type ErrorRow = { question_code: string; next_review_at: string | null; resolved_at: string | null };
 type RecentAttemptRow = { question_code: string };
+
+function validDraft(row: SessionDraftRow<PracticeDraftState> | undefined, reviewMode: boolean) {
+  const draft = row?.payload;
+  if (!draft || draft.version !== 1) return null;
+  if (draft.mode !== (reviewMode ? "review" : "adaptive")) return null;
+  if (!Array.isArray(draft.questionIds) || draft.questionIds.length === 0 || draft.questionIds.length > 30) return null;
+  if (!draft.questionIds.every((value) => typeof value === "string")) return null;
+  if (!Number.isInteger(draft.index) || draft.index < 0 || draft.index >= draft.questionIds.length) return null;
+  if (!Number.isFinite(new Date(draft.startedAt).getTime())) return null;
+  return draft;
+}
 
 export default async function PracticePage({ searchParams }: { searchParams: Promise<{ mode?: string }> }) {
   const user = await getCurrentUser();
@@ -23,12 +35,22 @@ export default async function PracticePage({ searchParams }: { searchParams: Pro
   let errorRows: ErrorRow[] = [];
   let recentAttempts: RecentAttemptRow[] = [];
   let managedQuestions: PublicPracticeQuestion[] = [];
+  let initialDraft: PracticeDraftState | null = null;
   let practiceReady = true;
   let accessReady = true;
   let access: AccessSummary | null = null;
 
   try { access = await getAccessSummary(user.id); } catch { accessReady = false; }
   try { managedQuestions = await getPublicPublishedDatabaseQuestions(); } catch { managedQuestions = []; }
+  try {
+    const now = new Date().toISOString();
+    const draftRows = await supabaseRest<Array<SessionDraftRow<PracticeDraftState>>>(
+      `session_drafts?select=payload,started_at,expires_at,updated_at&user_id=eq.${user.id}&kind=eq.practice&expires_at=gt.${encodeURIComponent(now)}&limit=1`
+    );
+    initialDraft = validDraft(draftRows[0], reviewMode);
+  } catch {
+    initialDraft = null;
+  }
 
   try {
     const fourteenDaysAgo = new Date(Date.now() - 14 * 86_400_000).toISOString();
@@ -58,20 +80,36 @@ export default async function PracticePage({ searchParams }: { searchParams: Pro
   const priorities = masteryRows.map((row) => ({ skillId: row.skill_id, mastery: Number(row.mastery) }));
   const seed = `${user.id}-${new Date().toISOString().slice(0, 10)}-${reviewMode ? "review" : "daily"}`;
   const excludedQuestionCodes = reviewMode ? [] : [...new Set(recentAttempts.map((attempt) => attempt.question_code))];
-  const questions = reviewMode && dueQuestionCodes.length === 0
-    ? []
-    : buildPracticeSession(priorities, dueQuestionCodes, questionCount, seed, excludedQuestionCodes, managedQuestions);
-  const blocked = Boolean(access && !access.isPremium && (access.practice.remaining ?? 0) <= 0);
+
+  let questions: PublicPracticeQuestion[];
+  if (initialDraft) {
+    questions = buildPracticeSession([], initialDraft.questionIds, initialDraft.questionIds.length, `${seed}-resume`, [], managedQuestions);
+    const exactMatch = questions.length === initialDraft.questionIds.length
+      && questions.every((question, index) => question.id === initialDraft?.questionIds[index]);
+    if (!exactMatch) initialDraft = null;
+  } else {
+    questions = [];
+  }
+
+  if (!initialDraft) {
+    questions = reviewMode && dueQuestionCodes.length === 0
+      ? []
+      : buildPracticeSession(priorities, dueQuestionCodes, questionCount, seed, excludedQuestionCodes, managedQuestions);
+  }
+
+  const blocked = Boolean(access && !access.isPremium && (access.practice.remaining ?? 0) <= 0 && !initialDraft);
 
   return (
     <div className="container focus-page">
       <header className="page-head page-head-compact">
         <div className="eyebrow">{reviewMode ? "Carnet d’erreurs" : `Séance adaptative · ${dailyMinutes} minutes`}</div>
-        <h1>{reviewMode ? "Réactive les notions qui t’ont déjà piégé." : "Une seule priorité à la fois."}</h1>
+        <h1>{initialDraft ? "Ta séance interrompue est prête à reprendre." : reviewMode ? "Réactive les notions qui t’ont déjà piégé." : "Une seule priorité à la fois."}</h1>
         <p>
-          {reviewMode
-            ? "Les erreurs reviennent à leur date de révision et disparaissent après plusieurs réussites stables."
-            : "La séance privilégie les faiblesses utiles, les erreurs arrivées à échéance et évite les répétitions trop récentes."}
+          {initialDraft
+            ? "Les réponses déjà validées, la question actuelle et le temps écoulé ont été restaurés."
+            : reviewMode
+              ? "Les erreurs reviennent à leur date de révision et disparaissent après plusieurs réussites stables."
+              : "La séance privilégie les faiblesses utiles, les erreurs arrivées à échéance et évite les répétitions trop récentes."}
         </p>
       </header>
 
@@ -87,7 +125,7 @@ export default async function PracticePage({ searchParams }: { searchParams: Pro
       {blocked ? (
         <UpgradeGate title="Ta séance gratuite du jour est terminée." message="Le compte gratuit comprend une séance adaptative ou une révision d’erreurs par jour." resetMessage="Ton quota gratuit sera réinitialisé demain." />
       ) : accessReady ? (
-        <PracticeRunner questions={questions} reviewMode={reviewMode} plannedMinutes={dailyMinutes} />
+        <PracticeRunner questions={questions} reviewMode={reviewMode} plannedMinutes={dailyMinutes} initialDraft={initialDraft} />
       ) : null}
     </div>
   );
