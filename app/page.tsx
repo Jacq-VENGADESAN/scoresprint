@@ -1,48 +1,138 @@
 import Link from "next/link";
-import { ProgressBar } from "@/components/progress-bar";
+
+function CheckIcon() {
+  return <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m4 10 3.5 3.5L16 5.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+}
+
+function MeasureIcon({ type }: { type: "target" | "clock" | "repeat" | "chart" }) {
+  if (type === "target") return <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" strokeWidth="1.7" /><circle cx="12" cy="12" r="2.4" fill="none" stroke="currentColor" strokeWidth="1.7" /><path d="M17 7 21 3m0 0v4m0-4h-4" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+  if (type === "clock") return <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" strokeWidth="1.7" /><path d="M12 7v5l3 2" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+  if (type === "repeat") return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h9a4 4 0 0 1 4 4v1m0 0-3-3m3 3 3-3M17 17H8a4 4 0 0 1-4-4v-1m0 0 3 3m-3-3-3 3" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+  return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19V9m7 10V5m7 14v-7" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" /><path d="M3 19h18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>;
+}
+
+function SprintMark() {
+  return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 16.5 10 12l3 2.5L19 8" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /><path d="M15 8h4v4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+}
 
 export default function HomePage() {
   return (
     <>
-      <section className="hero">
-        <div className="container">
-          <div className="eyebrow">Coach adaptatif · 20 minutes par jour</div>
-          <h1 className="display">Arrête de réviser au hasard. Travaille ce qui te fait vraiment perdre des points.</h1>
-          <p className="lead">ScoreSprint analyse tes erreurs, construit ta séance quotidienne et réactive les notions au bon moment pour t’aider à atteindre ton score cible.</p>
-          <div className="hero-actions">
-            <Link href="/onboarding" className="btn btn-primary">Lancer mon diagnostic gratuit</Link>
-            <Link href="/dashboard" className="btn btn-secondary">Voir la démo</Link>
-          </div>
-          <div className="hero-proof">Aucune carte bancaire · Résultat estimé sous forme de fourchette · Explications en français</div>
-
-          <div className="card hero-panel">
-            <div className="hero-copy">
-              <div className="eyebrow">Ta séance du jour</div>
-              <h2>Un programme qui s’adapte après chaque réponse.</h2>
-              <div className="session-list">
-                <div className="session-item"><span className="session-time">5 min</span><div><strong>Anciennes erreurs</strong><br/><span style={{ color: "var(--muted)" }}>6 notions à réactiver</span></div></div>
-                <div className="session-item"><span className="session-time">8 min</span><div><strong>Temps verbaux</strong><br/><span style={{ color: "var(--muted)" }}>Faiblesse principale</span></div></div>
-                <div className="session-item"><span className="session-time">7 min</span><div><strong>Partie 5 chronométrée</strong><br/><span style={{ color: "var(--muted)" }}>Objectif : gagner en vitesse</span></div></div>
-              </div>
-              <Link href="/practice" className="btn btn-primary">Commencer la séance</Link>
+      <section className="home-hero">
+        <div className="container home-hero-grid">
+          <div className="home-hero-copy">
+            <div className="hero-kicker"><span className="hero-kicker-dot" />Préparation ciblée · 10 à 45 minutes par jour</div>
+            <h1>Travaille moins au hasard. <em>Progresse là où ça compte.</em></h1>
+            <p>
+              ScoreSprint transforme tes erreurs en un programme quotidien clair : les bonnes notions,
+              dans le bon ordre, avec une mesure honnête de ta progression.
+            </p>
+            <div className="hero-actions">
+              <Link href="/onboarding" className="btn btn-primary">Commencer par le diagnostic</Link>
+              <Link href="#fonctionnement" className="btn btn-secondary">Découvrir le fonctionnement</Link>
             </div>
-            <div className="score-panel">
-              <div className="score-row"><div><div style={{ opacity: .7 }}>Score estimé</div><div className="big-score">735</div></div><div className="score-target">Objectif<br/><strong style={{ color: "white", fontSize: "1.6rem" }}>850</strong></div></div>
-              <div style={{ marginTop: 30 }}><ProgressBar value={72} /></div>
-              <p style={{ color: "rgba(255,255,255,.74)", lineHeight: 1.6 }}>Au rythme actuel, ton objectif devient atteignable dans 5 à 7 semaines.</p>
+            <div className="hero-proof-list" aria-label="Informations essentielles">
+              <span className="hero-proof-item"><CheckIcon />Compte gratuit</span>
+              <span className="hero-proof-item"><CheckIcon />Corrections en français</span>
+              <span className="hero-proof-item"><CheckIcon />Sans renouvellement automatique</span>
+            </div>
+          </div>
+
+          <div className="product-preview" aria-label="Aperçu du tableau de bord ScoreSprint">
+            <div className="preview-window">
+              <div className="preview-topbar">
+                <div className="preview-brand"><span className="brand-mark"><SprintMark /></span>ScoreSprint</div>
+                <span className="preview-date">Séance du jour</span>
+              </div>
+              <div className="preview-body">
+                <div className="preview-heading">
+                  <div>
+                    <span className="eyebrow">Priorité du jour</span>
+                    <h2>Consolider les temps verbaux</h2>
+                  </div>
+                  <div className="preview-score"><strong>735</strong><span>score estimé</span></div>
+                </div>
+                <div className="preview-progress" aria-hidden="true"><span /></div>
+                <div className="preview-session">
+                  <div className="preview-session-row">
+                    <span>5 min</span><div><strong>Réactiver 4 erreurs</strong><small>Échéances arrivées aujourd’hui</small></div><span>Prioritaire</span>
+                  </div>
+                  <div className="preview-session-row">
+                    <span>8 min</span><div><strong>Temps verbaux</strong><small>Maîtrise actuelle : 54 %</small></div><span>Faiblesse</span>
+                  </div>
+                  <div className="preview-session-row">
+                    <span>7 min</span><div><strong>Partie 5 chronométrée</strong><small>Objectif : gagner en vitesse</small></div><span>Vitesse</span>
+                  </div>
+                </div>
+                <div className="preview-footer">
+                  <div className="preview-streak"><strong>6 jours</strong> de régularité</div>
+                  <span className="preview-cta">Démarrer la séance</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="section">
+      <section id="fonctionnement" className="home-section home-section-muted">
         <div className="container">
-          <div className="eyebrow">Pourquoi ça marche</div>
-          <h2 style={{ fontSize: "clamp(2rem,4vw,3.2rem)", letterSpacing: "-.04em", marginTop: 10 }}>Une boucle simple, centrée sur tes erreurs.</h2>
-          <div className="grid-3" style={{ marginTop: 28 }}>
-            {[["01","Diagnostic précis","On mesure tes compétences, ta vitesse et les pièges qui reviennent."],["02","Séance personnalisée","Chaque minute est affectée aux notions qui ont le plus d’impact sur ton objectif."],["03","Répétition intelligente","Une notion mal comprise revient jusqu’à ce qu’elle soit réellement maîtrisée."]].map(([n,t,d]) => <article className="card feature" key={n}><div className="feature-icon">{n}</div><h3>{t}</h3><p>{d}</p></article>)}
+          <div className="section-heading">
+            <div className="eyebrow">Une méthode lisible</div>
+            <h2>Tu sais toujours quoi faire, et pourquoi tu le fais.</h2>
+            <p>Pas de catalogue infini ni de parcours opaque. ScoreSprint garde une boucle courte entre mesure, entraînement et révision.</p>
           </div>
-          <div className="footer-note">TOEIC® est une marque déposée d’ETS. ScoreSprint est une plateforme indépendante, non affiliée, non approuvée et non sponsorisée par ETS.</div>
+          <div className="process-grid">
+            <article className="process-step">
+              <span className="process-number">01 · Mesurer</span>
+              <h3>Un diagnostic court pose le point de départ.</h3>
+              <p>Il estime une fourchette de score et repère les compétences qui méritent le plus d’attention.</p>
+            </article>
+            <article className="process-step">
+              <span className="process-number">02 · Prioriser</span>
+              <h3>Chaque séance utilise ton temps là où il est utile.</h3>
+              <p>Les faiblesses, erreurs dues et questions récentes sont combinées pour créer un programme du jour.</p>
+            </article>
+            <article className="process-step">
+              <span className="process-number">03 · Consolider</span>
+              <h3>Une notion revient jusqu’à devenir stable.</h3>
+              <p>Le carnet d’erreurs planifie les révisions et mesure la maîtrise avec davantage de confiance au fil des réponses.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section className="home-section">
+        <div className="container measure-grid">
+          <div className="section-heading">
+            <div className="eyebrow">Ce qui est réellement suivi</div>
+            <h2>Une progression basée sur des traces concrètes.</h2>
+            <p>
+              ScoreSprint ne se contente pas d’afficher un pourcentage. Il relie les réponses, le temps passé,
+              les répétitions et les mini-examens pour donner une lecture plus utile de ton niveau.
+            </p>
+          </div>
+          <div className="measure-list">
+            <article className="measure-item"><span className="measure-icon"><MeasureIcon type="target" /></span><div><h3>Maîtrise par compétence</h3><p>Grammaire, prépositions, vocabulaire et compréhension sont suivis séparément.</p></div></article>
+            <article className="measure-item"><span className="measure-icon"><MeasureIcon type="clock" /></span><div><h3>Temps de réponse</h3><p>Une bonne réponse trop lente n’est pas interprétée comme une maîtrise parfaite.</p></div></article>
+            <article className="measure-item"><span className="measure-icon"><MeasureIcon type="repeat" /></span><div><h3>Erreurs qui reviennent</h3><p>Les pièges répétés sont conservés et reprogrammés jusqu’à plusieurs réussites.</p></div></article>
+            <article className="measure-item"><span className="measure-icon"><MeasureIcon type="chart" /></span><div><h3>Fourchette de score</h3><p>Le résultat s’affine avec le diagnostic, les séances et les mini-examens chronométrés.</p></div></article>
+          </div>
+        </div>
+      </section>
+
+      <section className="home-section">
+        <div className="container">
+          <div className="home-cta">
+            <div>
+              <h2>Commence par vingt questions. Le reste du programme se construit ensuite.</h2>
+              <p>Le diagnostic est gratuit et prend environ quinze minutes. Aucun moyen de paiement n’est demandé.</p>
+            </div>
+            <Link href="/onboarding" className="btn btn-primary">Lancer mon diagnostic</Link>
+          </div>
+          <p className="public-footer-note">
+            TOEIC® est une marque déposée d’ETS. ScoreSprint est une plateforme indépendante, non affiliée,
+            non approuvée et non sponsorisée par ETS. Les questions sont originales et les résultats sont des estimations internes.
+          </p>
         </div>
       </section>
     </>
