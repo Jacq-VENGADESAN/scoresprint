@@ -16,6 +16,7 @@ type SearchParams = {
   difficulty?: string;
   reported?: string;
   imported?: string;
+  seeded?: string;
 };
 
 function relationLabel(value: { label: string } | Array<{ label: string }> | null, fallback: string) {
@@ -68,16 +69,18 @@ export default async function AdminQuestionsPage({ searchParams }: { searchParam
         <div>
           <div className="eyebrow">Administration du contenu</div>
           <h1>Gère la banque de questions sans redéployer le site.</h1>
-          <p>Importe en masse, filtre la banque, duplique un modèle et traite les signalements des utilisateurs.</p>
+          <p>Installe la banque ScoreSprint, filtre les contenus, duplique un modèle et traite les signalements des utilisateurs.</p>
         </div>
         <div className="admin-head-actions">
           <Link className="btn btn-secondary" href="/admin/reports">Signalements {reports.length > 0 ? `(${reports.length})` : ""}</Link>
           <Link className="btn btn-secondary" href="/admin/questions/import">Importer un CSV</Link>
-          <Link className="btn btn-primary" href="/admin/questions/new">Ajouter une question</Link>
+          <Link className="btn btn-secondary" href="/admin/questions/new">Ajouter une question</Link>
+          <Link className="btn btn-primary" href="/admin/questions/seed">Installer 200 questions</Link>
         </div>
       </header>
 
       {params.imported ? <div className="alert alert-success">{params.imported} question{params.imported === "1" ? "" : "s"} importée{params.imported === "1" ? "" : "s"} avec succès.</div> : null}
+      {params.seeded ? <div className="alert alert-success">{params.seeded} question{params.seeded === "1" ? "" : "s"} originale{params.seeded === "1" ? "" : "s"} ajoutée{params.seeded === "1" ? "" : "s"} à la banque ScoreSprint.</div> : null}
 
       <section className="admin-summary-grid">
         <div className="card admin-summary-card"><span>Total géré</span><strong>{questions.length}</strong><small>En plus des 50 questions historiques dans le code</small></div>
@@ -100,7 +103,7 @@ export default async function AdminQuestionsPage({ searchParams }: { searchParam
       <section className="card admin-table-card">
         <div className="admin-table-head"><div><h2>{filteredQuestions.length} question{filteredQuestions.length > 1 ? "s" : ""} affichée{filteredQuestions.length > 1 ? "s" : ""}</h2><p className="muted-copy">Modifie une explication, archive un contenu ambigu ou publie une nouvelle question immédiatement.</p></div></div>
         {filteredQuestions.length === 0 ? (
-          <div className="admin-empty-state"><h3>Aucune question ne correspond aux filtres.</h3><p>Réinitialise les filtres ou importe de nouveaux contenus.</p></div>
+          <div className="admin-empty-state"><h3>Aucune question ne correspond aux filtres.</h3><p>Réinitialise les filtres ou installe de nouveaux contenus.</p></div>
         ) : (
           <div className="admin-table-wrap">
             <table className="admin-table">
