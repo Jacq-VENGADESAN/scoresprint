@@ -73,16 +73,21 @@ export function SiteNavigation({ authenticated, admin, displayName }: Navigation
     if (!open) return;
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = previous; };
+    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === "Escape") setOpen(false); };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.body.style.overflow = previous;
+      window.removeEventListener("keydown", closeOnEscape);
+    };
   }, [open]);
+
+  const closeMenu = () => setOpen(false);
 
   return (
     <div className="navigation-shell">
       <nav className="desktop-nav" aria-label="Navigation principale">
         {links.map((link) => (
-          <Link className={`nav-link ${isCurrent(pathname, link) ? "active" : ""}`} href={link.href} key={link.href}>
-            {link.label}
-          </Link>
+          <Link className={`nav-link ${isCurrent(pathname, link) ? "active" : ""}`} href={link.href} key={link.href}>{link.label}</Link>
         ))}
       </nav>
 
@@ -100,9 +105,7 @@ export function SiteNavigation({ authenticated, admin, displayName }: Navigation
               <Link href="/pricing"><CardIcon />Accès et tarifs</Link>
               {admin ? <Link href="/admin/questions"><TargetIcon />Administration</Link> : null}
               <div className="account-popover-divider" />
-              <form action="/api/auth/logout" method="post">
-                <button type="submit"><LogoutIcon />Se déconnecter</button>
-              </form>
+              <form action="/api/auth/logout" method="post"><button type="submit"><LogoutIcon />Se déconnecter</button></form>
             </div>
           </details>
         ) : (
@@ -112,14 +115,7 @@ export function SiteNavigation({ authenticated, admin, displayName }: Navigation
           </>
         )}
 
-        <button
-          type="button"
-          className="mobile-menu-button"
-          aria-expanded={open}
-          aria-controls="mobile-navigation"
-          aria-label={open ? "Fermer le menu" : "Ouvrir le menu"}
-          onClick={() => setOpen((current) => !current)}
-        >
+        <button type="button" className="mobile-menu-button" aria-expanded={open} aria-controls="mobile-navigation" aria-label={open ? "Fermer le menu" : "Ouvrir le menu"} onClick={() => setOpen((current) => !current)}>
           <MenuIcon open={open} />
         </button>
       </div>
@@ -127,23 +123,21 @@ export function SiteNavigation({ authenticated, admin, displayName }: Navigation
       <nav id="mobile-navigation" className="mobile-navigation" aria-label="Navigation mobile" hidden={!open}>
         <div className="mobile-nav-links">
           {links.map((link) => (
-            <Link className={`nav-link ${isCurrent(pathname, link) ? "active" : ""}`} href={link.href} key={link.href}>
-              {link.label}
-            </Link>
+            <Link className={`nav-link ${isCurrent(pathname, link) ? "active" : ""}`} href={link.href} key={link.href} onClick={closeMenu}>{link.label}</Link>
           ))}
-          {authenticated ? <Link className={`nav-link ${pathname === "/diagnostic" ? "active" : ""}`} href="/diagnostic">Diagnostic</Link> : null}
-          {authenticated && admin ? <Link className={`nav-link ${pathname.startsWith("/admin") ? "active" : ""}`} href="/admin/questions">Administration</Link> : null}
+          {authenticated ? <Link className={`nav-link ${pathname === "/diagnostic" ? "active" : ""}`} href="/diagnostic" onClick={closeMenu}>Diagnostic</Link> : null}
+          {authenticated && admin ? <Link className={`nav-link ${pathname.startsWith("/admin") ? "active" : ""}`} href="/admin/questions" onClick={closeMenu}>Administration</Link> : null}
         </div>
         <div className="mobile-nav-actions">
           {authenticated ? (
             <>
-              <Link className="btn btn-secondary" href="/account">Mon compte</Link>
+              <Link className="btn btn-secondary" href="/account" onClick={closeMenu}>Mon compte</Link>
               <form action="/api/auth/logout" method="post"><button className="btn btn-primary" type="submit">Se déconnecter</button></form>
             </>
           ) : (
             <>
-              <Link className="btn btn-secondary" href="/auth">Connexion</Link>
-              <Link className="btn btn-primary" href="/onboarding">Commencer gratuitement</Link>
+              <Link className="btn btn-secondary" href="/auth" onClick={closeMenu}>Connexion</Link>
+              <Link className="btn btn-primary" href="/onboarding" onClick={closeMenu}>Commencer gratuitement</Link>
             </>
           )}
         </div>
