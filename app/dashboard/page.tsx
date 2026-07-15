@@ -73,6 +73,14 @@ function scoreSourceLabel(source: ScoreSnapshotRow["source"] | undefined) {
   return "Diagnostic court";
 }
 
+function ArrowIcon() {
+  return <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11m-4-4 4 4-4 4" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+}
+
+function ExamIcon() {
+  return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10a2 2 0 0 1 2 2v14H5V6a2 2 0 0 1 2-2Z" fill="none" stroke="currentColor" strokeWidth="1.7" /><path d="M8 9h8M8 13h5" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" /></svg>;
+}
+
 export default async function DashboardPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/auth?next=/dashboard");
@@ -161,127 +169,133 @@ export default async function DashboardPage() {
   const weeklyAccuracy = weeklyQuestions > 0 ? Math.round((weeklyCorrect / weeklyQuestions) * 100) : 0;
   const streak = calculateStreak(studySessions.map((session) => session.completed_at));
   const maxDailyQuestions = Math.max(1, ...weeklyActivity.map((day) => day.questions));
+  const evidenceCount = latestSnapshot?.evidence_count ?? latestRun?.total_questions ?? 0;
 
   return (
-    <div className="container">
-      <header className="page-head">
-        <div className="eyebrow">Tableau de bord</div>
-        <h1>Bonjour {displayName}, voilà ce qui mérite ton temps aujourd’hui.</h1>
-        <p>
-          {latestRun
-            ? "Ton diagnostic, tes séances et tes mini-examens alimentent désormais une estimation progressive plutôt qu’un score figé."
-            : "Ton objectif est enregistré. Termine le diagnostic pour remplacer les estimations provisoires par tes propres résultats."}
-        </p>
+    <div className="container dashboard-page">
+      <header className="page-head dashboard-page-head">
+        <div>
+          <div className="eyebrow">Tableau de bord</div>
+          <h1>Bonjour {displayName}. Voici ton prochain meilleur effort.</h1>
+          <p>
+            {latestRun
+              ? "Ton estimation se précise à mesure que tu réponds. La priorité du jour est calculée à partir de tes faiblesses et de tes erreurs dues."
+              : "Ton objectif est enregistré. Le diagnostic permettra de remplacer les valeurs provisoires par tes propres résultats."}
+          </p>
+        </div>
+        <div className="dashboard-head-actions">
+          <Link href="/history" className="btn btn-secondary">Voir l’historique</Link>
+          <Link href="/account" className="btn btn-secondary">Mon compte</Link>
+        </div>
       </header>
 
-      {!databaseReady ? (
-        <div className="alert alert-warning">Les tables Supabase principales ne sont pas accessibles. Vérifie les deux premières migrations.</div>
-      ) : null}
-      {!diagnosticReady ? (
-        <div className="alert alert-warning">La migration de calibration n’est pas encore accessible. Exécute le nouveau script SQL.</div>
-      ) : null}
-      {!analyticsReady ? (
-        <div className="alert alert-warning">La migration des statistiques n’est pas encore accessible.</div>
-      ) : null}
-      {!measurementReady ? (
-        <div className="alert alert-warning">La courbe de score et les mini-examens nécessitent la nouvelle migration de calibration.</div>
-      ) : null}
+      {!databaseReady ? <div className="alert alert-warning">Les tables Supabase principales ne sont pas accessibles. Vérifie les premières migrations.</div> : null}
+      {!diagnosticReady ? <div className="alert alert-warning">Les données de maîtrise ne sont pas encore accessibles.</div> : null}
+      {!analyticsReady ? <div className="alert alert-warning">Les statistiques de séances ne sont pas encore accessibles.</div> : null}
+      {!measurementReady ? <div className="alert alert-warning">La courbe de score nécessite la migration de calibration.</div> : null}
 
-      <div className="dashboard-grid">
-        <div style={{ display: "grid", gap: 22 }}>
-          <section className="card panel">
-            <div className="panel-title">
-              <h2>Progression vers {targetScore}</h2>
-              <span className="badge">{remainingDays === null ? "Date à définir" : `${remainingDays} jours restants`}</span>
+      <section className="dashboard-hero" aria-labelledby="score-heading">
+        <div className="dashboard-score-block">
+          <div className="dashboard-score-label">
+            <span id="score-heading">Estimation actuelle</span>
+            <span className="badge">Confiance {scoreConfidence}</span>
+          </div>
+          <div className="dashboard-score-range">{estimateLow}–{estimateHigh}</div>
+          <div className="dashboard-score-meta">
+            <span>Estimation centrale : <strong>{currentScore}</strong></span>
+            <span>Source : <strong>{scoreSourceLabel(latestSnapshot?.source)}</strong></span>
+            <span>{evidenceCount} observation{evidenceCount > 1 ? "s" : ""}</span>
+          </div>
+
+          <div className="dashboard-target">
+            <div className="dashboard-target-row">
+              <div><span>Progression vers l’objectif</span><strong>{targetScore}</strong></div>
+              <span>{remainingDays === null ? "Date d’examen à définir" : `${remainingDays} jour${remainingDays > 1 ? "s" : ""} restant${remainingDays > 1 ? "s" : ""}`}</span>
+            </div>
+            <div className="dashboard-progress-track" aria-label={`${progress}% de l’objectif estimé atteint`}>
+              <div className="dashboard-progress-fill" style={{ width: `${progress}%` }} />
+            </div>
+          </div>
+
+          <div className="dashboard-score-actions">
+            <Link className="btn btn-primary" href={latestRun ? "/practice" : "/diagnostic"}>
+              {latestRun ? "Démarrer la séance" : "Faire le diagnostic"}<ArrowIcon />
+            </Link>
+            <Link className="btn btn-secondary" href="/errors">Revoir mes erreurs</Link>
+          </div>
+        </div>
+
+        <aside className="dashboard-today" aria-label="Programme du jour">
+          <div className="dashboard-today-head">
+            <div><span className="eyebrow">Aujourd’hui</span><h2>Ta séance ciblée</h2></div>
+            <span className="dashboard-duration">{dailyMinutes} min</span>
+          </div>
+          {sessionPlan.length > 0 ? (
+            <div className="dashboard-plan-list">
+              {sessionPlan.map((block) => (
+                <div className="dashboard-plan-item" key={block.skillId}>
+                  <span className="dashboard-plan-time">{block.minutes}m</span>
+                  <div><strong>{labelMap.get(block.skillId) ?? block.skillId}</strong><span>{block.reason}</span></div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="notice">Termine le diagnostic pour générer une séance réellement personnalisée.</div>
+          )}
+          <Link className="btn btn-primary" href={latestRun ? "/practice" : "/diagnostic"}>
+            {latestRun ? "Commencer maintenant" : "Lancer le diagnostic"}
+          </Link>
+        </aside>
+      </section>
+
+      <div className="dashboard-content-grid">
+        <div className="dashboard-main-column">
+          <section className="card dashboard-section">
+            <div className="dashboard-section-head">
+              <div><h2>Évolution de l’estimation</h2><p>Les mini-examens pèsent davantage que les petites séances quotidiennes.</p></div>
+              <span className="badge">{scoreSnapshots.length} mesure{scoreSnapshots.length > 1 ? "s" : ""}</span>
             </div>
             <div className="stats">
-              <StatCard label="Score estimé" value={`${estimateLow}–${estimateHigh}`} detail={scoreSourceLabel(latestSnapshot?.source)} />
-              <StatCard label="Objectif" value={String(targetScore)} detail={`Estimation centrale : ${currentScore}`} />
-              <StatCard label="Confiance" value={scoreConfidence} detail={`${latestSnapshot?.evidence_count ?? latestRun?.total_questions ?? 0} observations`} />
+              <StatCard label="Fourchette actuelle" value={`${estimateLow}–${estimateHigh}`} detail={scoreSourceLabel(latestSnapshot?.source)} />
+              <StatCard label="Objectif" value={String(targetScore)} detail={`Écart central : ${Math.max(0, targetScore - currentScore)} points`} />
+              <StatCard label="Confiance" value={scoreConfidence} detail={`${evidenceCount} observations`} />
             </div>
-            <div style={{ marginTop: 22 }}><ProgressBar value={progress} /></div>
             <ScoreCurve snapshots={scoreSnapshots} />
           </section>
 
-          <section className="card panel">
-            <div className="mini-exam-cta">
-              <div>
-                <h3>Affiner ton score avec 30 questions chronométrées</h3>
-                <p>Les parties 5, 6 et 7 sont évaluées en 25 minutes. Le résultat pèse davantage qu’une petite séance quotidienne.</p>
-              </div>
-              <Link href="/mock-exam" className="btn btn-primary">Passer le mini-examen</Link>
-            </div>
-          </section>
-
-          <section className="card panel">
-            <div className="panel-title">
-              <h2>Tes 7 derniers jours</h2>
+          <section className="card dashboard-section">
+            <div className="dashboard-section-head">
+              <div><h2>Tes sept derniers jours</h2><p>La régularité compte davantage qu’une longue séance isolée.</p></div>
               <span className="badge">{studySessions.length > 0 ? `${streak} jour${streak > 1 ? "s" : ""} de série` : "Première séance à faire"}</span>
             </div>
             <div className="stats">
-              <StatCard label="Questions" value={String(weeklyQuestions)} detail="Sur les 7 derniers jours" />
-              <StatCard label="Réussite" value={`${weeklyAccuracy}%`} detail={`${weeklyCorrect} bonnes réponses`} />
+              <StatCard label="Questions" value={String(weeklyQuestions)} detail="Sur 7 jours" />
+              <StatCard label="Réussite" value={`${weeklyAccuracy}%`} detail={`${weeklyCorrect} réponses correctes`} />
               <StatCard label="Temps actif" value={`${weeklyMinutes} min`} detail={`${weeklyActivity.reduce((sum, day) => sum + day.sessions, 0)} séances`} />
             </div>
-
             <div className="weekly-chart" aria-label="Activité des sept derniers jours">
               {weeklyActivity.map((day) => {
                 const height = day.questions > 0 ? Math.max(12, Math.round((day.questions / maxDailyQuestions) * 100)) : 4;
                 return (
                   <div className="weekly-day" key={day.dateKey} title={`${day.questions} questions · ${day.accuracy}% de réussite`}>
-                    <div className="weekly-bar-track">
-                      <div className={`weekly-bar ${day.questions === 0 ? "weekly-bar-empty" : ""}`} style={{ height: `${height}%` }} />
-                    </div>
-                    <strong>{day.questions}</strong>
-                    <span>{day.label}</span>
+                    <div className="weekly-bar-track"><div className={`weekly-bar ${day.questions === 0 ? "weekly-bar-empty" : ""}`} style={{ height: `${height}%` }} /></div>
+                    <strong>{day.questions}</strong><span>{day.label}</span>
                   </div>
                 );
               })}
             </div>
-
-            {studySessions.length > 0 ? (
-              <div className="recent-session-list">
-                {studySessions.slice(0, 3).map((studySession) => (
-                  <div className="recent-session" key={studySession.id}>
-                    <div>
-                      <strong>{studySession.mode === "review" ? "Révision d’erreurs" : "Séance adaptative"}</strong>
-                      <span>{formatDate(studySession.completed_at)} · {studySession.completed_minutes} min</span>
-                    </div>
-                    <strong>{studySession.correct_answers}/{studySession.total_questions}</strong>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="notice analytics-empty">Termine une séance pour faire apparaître ta série, ton temps de travail et ta régularité.</div>
-            )}
           </section>
 
-          <section className="card panel">
-            <div className="panel-title"><h2>Séance personnalisée</h2><span style={{ color: "var(--muted)" }}>{dailyMinutes} minutes</span></div>
-            {sessionPlan.length > 0 ? (
-              <div className="session-list">
-                {sessionPlan.map((block) => (
-                  <div className="session-item" key={block.skillId}>
-                    <span className="session-time">{block.minutes} min</span>
-                    <div>
-                      <strong>{labelMap.get(block.skillId) ?? block.skillId}</strong><br />
-                      <span style={{ color: "var(--muted)" }}>{block.reason}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="notice" style={{ marginBottom: 18 }}>Le diagnostic est nécessaire pour générer une séance réellement personnalisée.</div>
-            )}
-            <Link className="btn btn-primary" href={latestRun ? "/practice" : "/diagnostic"}>
-              {latestRun ? "Démarrer ma séance" : "Faire mon diagnostic"}
-            </Link>
+          <section className="dashboard-mini-exam">
+            <span className="dashboard-mini-exam-icon"><ExamIcon /></span>
+            <div><h3>Besoin d’une mesure plus fiable ?</h3><p>Le mini-examen utilise 30 questions chronométrées et affine davantage la courbe.</p></div>
+            <Link href="/mock-exam" className="btn btn-secondary">Passer le mini-examen</Link>
           </section>
         </div>
 
-        <aside style={{ display: "grid", gap: 22, alignContent: "start" }}>
-          <section className="card panel">
-            <div className="panel-title"><h3>Maîtrise mesurée</h3></div>
+        <aside className="dashboard-side-column">
+          <section className="card dashboard-section">
+            <div className="dashboard-section-head"><div><h3>Maîtrise par compétence</h3><p>Les domaines les plus faibles apparaissent en premier.</p></div></div>
             {masteryRows.length > 0 ? masteryRows.map((row) => {
               const value = Math.round(Number(row.mastery));
               const confidence = confidenceFromEvidence(row.evidence_count);
@@ -289,32 +303,34 @@ export default async function DashboardPage() {
                 <div className="skill" key={row.skill_id}>
                   <div className="skill-top"><span>{labelMap.get(row.skill_id) ?? row.skill_id}</span><strong>{value}%</strong></div>
                   <ProgressBar value={value} />
-                  <div className="mastery-evidence">
-                    <span>Confiance {confidence}</span>
-                    <span>{row.correct_count}/{row.evidence_count} réussites</span>
-                  </div>
+                  <div className="mastery-evidence"><span>Confiance {confidence}</span><span>{row.correct_count}/{row.evidence_count} réussites</span></div>
                 </div>
               );
-            }) : <p style={{ color: "var(--muted)" }}>Aucune compétence mesurée pour le moment.</p>}
+            }) : <p className="muted-copy">Aucune compétence mesurée pour le moment.</p>}
           </section>
 
-          <section className="card panel">
-            <div className="panel-title"><h3>Régularité</h3></div>
-            <div className="streak-number">{streak}</div>
-            <p className="muted-copy" style={{ marginTop: 4 }}>jour{streak > 1 ? "s" : ""} consécutif{streak > 1 ? "s" : ""} avec une séance terminée.</p>
-            <Link href="/practice" className="btn btn-ghost">Continuer ma série →</Link>
+          <section className="card dashboard-section">
+            <div className="dashboard-section-head"><div><h3>Activités récentes</h3><p>Les trois dernières séances terminées.</p></div><Link href="/history" className="btn btn-ghost">Tout voir</Link></div>
+            {studySessions.length > 0 ? (
+              <div className="recent-session-list">
+                {studySessions.slice(0, 3).map((studySession) => (
+                  <Link className="recent-session" href={`/history/session/${studySession.id}`} key={studySession.id}>
+                    <div><strong>{studySession.mode === "review" ? "Révision d’erreurs" : "Séance adaptative"}</strong><span>{formatDate(studySession.completed_at)} · {studySession.completed_minutes} min</span></div>
+                    <strong>{studySession.correct_answers}/{studySession.total_questions}</strong>
+                  </Link>
+                ))}
+              </div>
+            ) : <div className="notice">Termine une séance pour faire apparaître ton activité.</div>}
           </section>
 
-          <section className="card panel">
-            <div className="panel-title"><h3>Point d’attention</h3></div>
+          <section className="card dashboard-section">
+            <div className="dashboard-section-head"><div><h3>Point d’attention</h3><p>La priorité la plus rentable actuellement.</p></div></div>
             <div className="notice">
               {weakest
-                ? `${labelMap.get(weakest.skill_id) ?? weakest.skill_id} est ta priorité avec ${Math.round(Number(weakest.mastery))}% de maîtrise, sur ${weakest.evidence_count} observations.`
-                : "Le diagnostic identifiera la notion sur laquelle tu gagneras le plus rapidement des points."}
+                ? `${labelMap.get(weakest.skill_id) ?? weakest.skill_id} est à ${Math.round(Number(weakest.mastery))}% de maîtrise sur ${weakest.evidence_count} observations.`
+                : "Le diagnostic identifiera la notion sur laquelle tu peux gagner le plus rapidement des points."}
             </div>
-            <Link href="/diagnostic" className="btn btn-ghost" style={{ marginTop: 14 }}>
-              {latestRun ? "Refaire le diagnostic →" : "Commencer le diagnostic →"}
-            </Link>
+            <div style={{ marginTop: 18 }}><span className="streak-number">{streak}</span><p className="muted-copy">jour{streak > 1 ? "s" : ""} consécutif{streak > 1 ? "s" : ""} avec une séance terminée.</p></div>
           </section>
         </aside>
       </div>

@@ -33,14 +33,19 @@ type DiagnosticRun = {
   completed_at: string;
 };
 
+type HistoryKind = "session" | "exam" | "diagnostic";
 type HistoryItem = {
   id: string;
-  kind: "session" | "exam" | "diagnostic";
+  kind: HistoryKind;
   date: string;
   title: string;
   result: string;
   detail: string;
   href?: string;
+};
+
+type HistoryPageProps = {
+  searchParams: Promise<{ type?: string }>;
 };
 
 function formatDate(value: string) {
@@ -53,34 +58,33 @@ function formatDate(value: string) {
   }).format(new Date(value));
 }
 
-export default async function HistoryPage() {
+const filters: Array<{ id: "all" | HistoryKind; label: string }> = [
+  { id: "all", label: "Tout" },
+  { id: "session", label: "Séances" },
+  { id: "exam", label: "Mini-examens" },
+  { id: "diagnostic", label: "Diagnostics" }
+];
+
+export default async function HistoryPage({ searchParams }: HistoryPageProps) {
   const user = await getCurrentUser();
   if (!user) redirect("/auth?next=/history");
+  const params = await searchParams;
+  const selectedType = filters.some((filter) => filter.id === params.type) ? params.type as "all" | HistoryKind : "all";
 
   let items: HistoryItem[] = [];
   let ready = true;
   let accessReady = true;
   let access: AccessSummary | null = null;
 
-  try {
-    access = await getAccessSummary(user.id);
-  } catch {
-    accessReady = false;
-  }
+  try { access = await getAccessSummary(user.id); } catch { accessReady = false; }
 
   try {
     const cutoff = access ? historyCutoffIso(access) : null;
     const dateFilter = cutoff ? `&completed_at=gte.${encodeURIComponent(cutoff)}` : "";
     const [sessions, exams, diagnostics] = await Promise.all([
-      supabaseRest<StudySession[]>(
-        `study_sessions?select=id,mode,total_questions,correct_answers,completed_minutes,completed_at&user_id=eq.${user.id}&completed_at=not.is.null${dateFilter}&order=completed_at.desc&limit=50`
-      ),
-      supabaseRest<MiniExamRun[]>(
-        `mini_exam_runs?select=id,correct_answers,total_questions,estimated_score,score_low,score_high,duration_ms,completed_at&user_id=eq.${user.id}${dateFilter}&order=completed_at.desc&limit=30`
-      ),
-      supabaseRest<DiagnosticRun[]>(
-        `diagnostic_runs?select=id,correct_answers,total_questions,estimated_score,score_low,score_high,completed_at&user_id=eq.${user.id}${dateFilter}&order=completed_at.desc&limit=20`
-      )
+      supabaseRest<StudySession[]>(`study_sessions?select=id,mode,total_questions,correct_answers,completed_minutes,completed_at&user_id=eq.${user.id}&completed_at=not.is.null${dateFilter}&order=completed_at.desc&limit=50`),
+      supabaseRest<MiniExamRun[]>(`mini_exam_runs?select=id,correct_answers,total_questions,estimated_score,score_low,score_high,duration_ms,completed_at&user_id=eq.${user.id}${dateFilter}&order=completed_at.desc&limit=30`),
+      supabaseRest<DiagnosticRun[]>(`diagnostic_runs?select=id,correct_answers,total_questions,estimated_score,score_low,score_high,completed_at&user_id=eq.${user.id}${dateFilter}&order=completed_at.desc&limit=20`)
     ]);
 
     items = [
@@ -115,31 +119,36 @@ export default async function HistoryPage() {
     ready = false;
   }
 
+  const counts = new Map<HistoryKind, number>([
+    ["session", items.filter((item) => item.kind === "session").length],
+    ["exam", items.filter((item) => item.kind === "exam").length],
+    ["diagnostic", items.filter((item) => item.kind === "diagnostic").length]
+  ]);
+  const visibleItems = selectedType === "all" ? items : items.filter((item) => item.kind === selectedType);
+
   return (
     <div className="container history-page">
       <header className="page-head">
-        <div className="eyebrow">Historique</div>
-        <h1>Retrouve chaque mesure et comprends précisément tes erreurs.</h1>
-        <p>Les séances et mini-examens peuvent être ouverts pour revoir les questions, tes choix, les bonnes réponses et le temps passé.</p>
+        <div>
+          <div className="eyebrow">Historique</div>
+          <h1>Retrouve les activités qui ont réellement fait évoluer ton niveau.</h1>
+          <p>Ouvre une séance ou un mini-examen pour revoir chaque réponse, la correction et le temps utilisé.</p>
+        </div>
       </header>
 
       {access && !access.isPremium ? (
-        <div className="quota-strip">
-          <strong>Compte gratuit</strong>
-          <span>Historique limité aux {access.historyDays} derniers jours</span>
-          <a href="/pricing">Débloquer l’historique complet →</a>
-        </div>
+        <div className="quota-strip"><strong>Compte gratuit</strong><span>Historique limité aux {access.historyDays} derniers jours</span><a href="/pricing">Débloquer l’historique complet →</a></div>
       ) : access?.isPremium ? (
         <div className="quota-strip quota-strip-premium"><strong>Premium</strong><span>Historique complet activé</span></div>
       ) : null}
 
-      {!ready ? <div className="alert alert-warning">L’historique n’est pas accessible. Vérifie que les dernières migrations Supabase ont été exécutées.</div> : null}
-      {!accessReady ? <div className="alert alert-warning">La migration des quotas gratuits n’est pas encore accessible.</div> : null}
+      {!ready ? <div className="alert alert-warning">L’historique n’est pas accessible. Vérifie les dernières migrations Supabase.</div> : null}
+      {!accessReady ? <div className="alert alert-warning">Les informations de quota ne sont pas encore accessibles.</div> : null}
 
       <section className="card panel history-summary">
         <div>
-          <span className="eyebrow">Contenu disponible</span>
-          <h2>{items.length} activité{items.length > 1 ? "s" : ""} enregistrée{items.length > 1 ? "s" : ""}</h2>
+          <span className="eyebrow">Activité enregistrée</span>
+          <h2>{items.length} activité{items.length > 1 ? "s" : ""} dans la période accessible</h2>
         </div>
         <div className="history-summary-actions">
           <Link href="/practice" className="btn btn-primary">Nouvelle séance</Link>
@@ -147,30 +156,27 @@ export default async function HistoryPage() {
         </div>
       </section>
 
-      {items.length > 0 ? (
+      <nav className="history-filter-tabs" aria-label="Filtrer l’historique">
+        {filters.map((filter) => {
+          const count = filter.id === "all" ? items.length : counts.get(filter.id) ?? 0;
+          const href = filter.id === "all" ? "/history" : `/history?type=${filter.id}`;
+          return <Link href={href} className={selectedType === filter.id ? "active" : ""} key={filter.id}>{filter.label}<span>{count}</span></Link>;
+        })}
+      </nav>
+
+      {visibleItems.length > 0 ? (
         <div className="history-list">
-          {items.map((item) => {
+          {visibleItems.map((item) => {
+            const kindLabel = item.kind === "session" ? "Séance" : item.kind === "exam" ? "Examen" : "Diagnostic";
             const content = (
               <>
-                <div className={`history-kind history-kind-${item.kind}`}>
-                  {item.kind === "session" ? "Séance" : item.kind === "exam" ? "Examen" : "Diagnostic"}
-                </div>
-                <div className="history-main">
-                  <strong>{item.title}</strong>
-                  <span>{formatDate(item.date)}</span>
-                  <small>{item.detail}</small>
-                </div>
-                <div className="history-result">
-                  <strong>{item.result}</strong>
-                  <span>{item.href ? "Voir le détail →" : "Mesure initiale"}</span>
-                </div>
+                <div className={`history-kind history-kind-${item.kind}`}>{kindLabel}</div>
+                <div className="history-main"><strong>{item.title}</strong><span>{formatDate(item.date)}</span><small>{item.detail}</small></div>
+                <div className="history-result"><strong>{item.result}</strong><span>{item.href ? "Voir le détail →" : "Mesure initiale"}</span></div>
               </>
             );
-
             return item.href ? (
-              <Link className="card history-row history-row-link" href={item.href} key={`${item.kind}-${item.id}`}>
-                {content}
-              </Link>
+              <Link className="card history-row history-row-link" href={item.href} key={`${item.kind}-${item.id}`}>{content}</Link>
             ) : (
               <div className="card history-row" key={`${item.kind}-${item.id}`}>{content}</div>
             );
@@ -178,7 +184,8 @@ export default async function HistoryPage() {
         </div>
       ) : (
         <section className="card empty-state">
-          <h2>Aucune activité visible dans cette période.</h2>
+          <div className="eyebrow">Aucun résultat</div>
+          <h2>{items.length > 0 ? "Aucune activité de ce type dans la période." : "Aucune activité enregistrée pour le moment."}</h2>
           <p className="muted-copy">Termine une séance ou un mini-examen pour alimenter ton historique.</p>
           <Link href="/practice" className="btn btn-primary">Démarrer une séance</Link>
         </section>

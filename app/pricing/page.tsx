@@ -7,25 +7,25 @@ const plans = [
   {
     code: "free",
     name: "Gratuit",
-    kicker: "Découvrir ScoreSprint",
+    kicker: "Découvrir la méthode",
     price: "0 €",
     duration: "sans limite de durée",
-    description: "Pour faire le diagnostic et commencer à travailler régulièrement.",
+    description: "Pour établir ton niveau et installer une première routine de travail.",
     features: ["Diagnostic complet", "1 séance par jour", "1 mini-examen par mois", "Historique des 7 derniers jours"]
   },
   {
     code: "sprint_30",
     name: "Sprint 30",
-    kicker: "Préparation intensive",
+    kicker: "Le plus choisi",
     price: "24,90 €",
     duration: "30 jours",
-    description: "Le meilleur choix pour préparer un objectif précis dans le mois.",
+    description: "Pour préparer une échéance proche avec un rythme soutenu et sans quota.",
     features: ["Séances illimitées", "Mini-examens illimités", "Carnet d’erreurs complet", "Historique et statistiques complets"]
   },
   {
     code: "sprint_90",
     name: "Sprint 90",
-    kicker: "Progression durable",
+    kicker: "Progression longue",
     price: "49,90 €",
     duration: "90 jours",
     description: "Pour construire une progression régulière sur plusieurs mois.",
@@ -39,11 +39,8 @@ export default async function PricingPage({ searchParams }: { searchParams: Prom
   const billingReady = stripeIsConfigured();
   let currentPlan = "Gratuit";
   if (user) {
-    try {
-      currentPlan = accessLabel(await getAccessSummary(user.id));
-    } catch {
-      currentPlan = "Configuration en attente";
-    }
+    try { currentPlan = accessLabel(await getAccessSummary(user.id)); }
+    catch { currentPlan = "Configuration en attente"; }
   }
 
   const statusMessage = params.payment === "cancelled"
@@ -55,15 +52,17 @@ export default async function PricingPage({ searchParams }: { searchParams: Prom
         : null;
 
   return (
-    <div className="container">
-      <header className="page-head">
-        <div className="eyebrow">Tarifs simples</div>
-        <h1>Paie pour ta période de préparation, pas pour un abonnement oublié.</h1>
-        <p>Les accès Premium durent 30 ou 90 jours, sans renouvellement automatique. Le paiement est hébergé et sécurisé par Stripe.</p>
+    <div className="container pricing-page">
+      <header className="page-head pricing-intro">
+        <div>
+          <div className="eyebrow">Accès simples</div>
+          <h1>Choisis une période de préparation, pas un abonnement oublié.</h1>
+          <p>Les accès Premium durent 30 ou 90 jours et ne se renouvellent jamais automatiquement.</p>
+        </div>
       </header>
 
       <div className={`pricing-status-note ${statusMessage ? "pricing-status-error" : ""}`}>
-        {statusMessage ?? (user ? `Ton accès actuel : ${currentPlan}.` : "Crée d’abord un compte gratuit, puis choisis ta période de préparation.")}
+        {statusMessage ?? (user ? `Ton accès actuel : ${currentPlan}.` : "Commence gratuitement, puis active Premium uniquement lorsque tu en as besoin.")}
       </div>
 
       <div className="pricing-grid">
@@ -72,34 +71,32 @@ export default async function PricingPage({ searchParams }: { searchParams: Prom
             {index === 1 ? <span className="badge" style={{ position: "absolute", top: 18, right: 18 }}>Recommandé</span> : null}
             <span className="plan-kicker">{plan.kicker}</span>
             <h2>{plan.name}</h2>
-            <p style={{ color: "var(--muted)", minHeight: 66 }}>{plan.description}</p>
-            <div className="price">{plan.price} <small>/ {plan.duration}</small></div>
+            <p className="muted-copy">{plan.description}</p>
+            <div className="price">{plan.price}<small>{plan.duration}</small></div>
             <ul className="checks">{plan.features.map((feature) => <li key={feature}>{feature}</li>)}</ul>
+
             {plan.code === "free" ? (
-              <Link href={user ? "/account" : "/auth"} className="btn btn-secondary" style={{ width: "100%" }}>
+              <Link href={user ? "/account" : "/auth"} className="btn btn-secondary">
                 {user ? "Voir mon accès" : "Créer mon compte gratuit"}
               </Link>
             ) : !user ? (
-              <Link href="/auth?next=/pricing" className={`btn ${index === 1 ? "btn-primary" : "btn-secondary"}`} style={{ width: "100%" }}>
-                Se connecter pour acheter
-              </Link>
+              <Link href="/auth?next=/pricing" className={`btn ${index === 1 ? "btn-primary" : "btn-secondary"}`}>Se connecter pour acheter</Link>
             ) : billingReady ? (
               <form action="/api/billing/checkout" method="post">
                 <input type="hidden" name="plan" value={plan.code} />
-                <button className={`btn ${index === 1 ? "btn-primary" : "btn-secondary"}`} style={{ width: "100%" }} type="submit">
-                  Acheter {plan.name}
-                </button>
+                <button className={`btn ${index === 1 ? "btn-primary" : "btn-secondary"}`} style={{ width: "100%" }} type="submit">Choisir {plan.name}</button>
               </form>
             ) : (
-              <span className={`btn ${index === 1 ? "btn-primary" : "btn-secondary"} btn-disabled`} style={{ width: "100%" }}>
-                Configuration Stripe requise
-              </span>
+              <span className={`btn ${index === 1 ? "btn-primary" : "btn-secondary"} btn-disabled`}>Configuration Stripe requise</span>
             )}
           </article>
         ))}
       </div>
 
-      <p className="billing-secure-note">Paiement unique. Les coordonnées bancaires sont saisies directement sur Stripe et ne transitent pas par ScoreSprint.</p>
+      <div className="billing-secure-note">
+        <strong>Paiement unique et sécurisé par Stripe.</strong>
+        <span> Les coordonnées bancaires ne transitent pas par ScoreSprint. Un nouvel achat prolonge un accès Premium déjà actif.</span>
+      </div>
     </div>
   );
 }
