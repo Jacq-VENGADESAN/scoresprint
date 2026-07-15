@@ -7,24 +7,10 @@ import { buildPracticeSession } from "@/lib/practice-catalog";
 import type { PublicPracticeQuestion } from "@/lib/practice-bank";
 import { getCurrentUser, supabaseRest } from "@/lib/supabase-server";
 
-type Goal = {
-  daily_minutes: number;
-};
-
-type MasteryRow = {
-  skill_id: string;
-  mastery: number | string;
-};
-
-type ErrorRow = {
-  question_code: string;
-  next_review_at: string | null;
-  resolved_at: string | null;
-};
-
-type RecentAttemptRow = {
-  question_code: string;
-};
+type Goal = { daily_minutes: number };
+type MasteryRow = { skill_id: string; mastery: number | string };
+type ErrorRow = { question_code: string; next_review_at: string | null; resolved_at: string | null };
+type RecentAttemptRow = { question_code: string };
 
 export default async function PracticePage({ searchParams }: { searchParams: Promise<{ mode?: string }> }) {
   const user = await getCurrentUser();
@@ -41,17 +27,8 @@ export default async function PracticePage({ searchParams }: { searchParams: Pro
   let accessReady = true;
   let access: AccessSummary | null = null;
 
-  try {
-    access = await getAccessSummary(user.id);
-  } catch {
-    accessReady = false;
-  }
-
-  try {
-    managedQuestions = await getPublicPublishedDatabaseQuestions();
-  } catch {
-    managedQuestions = [];
-  }
+  try { access = await getAccessSummary(user.id); } catch { accessReady = false; }
+  try { managedQuestions = await getPublicPublishedDatabaseQuestions(); } catch { managedQuestions = []; }
 
   try {
     const fourteenDaysAgo = new Date(Date.now() - 14 * 86_400_000).toISOString();
@@ -67,12 +44,8 @@ export default async function PracticePage({ searchParams }: { searchParams: Pro
     recentAttempts = recent;
   } catch {
     practiceReady = false;
-    try {
-      const masteries = await supabaseRest<MasteryRow[]>(`user_mastery?select=skill_id,mastery&user_id=eq.${user.id}&order=mastery.asc`);
-      masteryRows = masteries;
-    } catch {
-      masteryRows = [];
-    }
+    try { masteryRows = await supabaseRest<MasteryRow[]>(`user_mastery?select=skill_id,mastery&user_id=eq.${user.id}&order=mastery.asc`); }
+    catch { masteryRows = []; }
   }
 
   if (masteryRows.length === 0) redirect("/diagnostic");
@@ -91,42 +64,28 @@ export default async function PracticePage({ searchParams }: { searchParams: Pro
   const blocked = Boolean(access && !access.isPremium && (access.practice.remaining ?? 0) <= 0);
 
   return (
-    <div className="container">
-      <header className="page-head">
-        <div className="eyebrow">{reviewMode ? "Révision du carnet d’erreurs" : `Séance adaptative · ${dailyMinutes} minutes`}</div>
-        <h1>{reviewMode ? "Réactive les notions qui t’ont déjà piégé." : "Travaille d’abord ce qui te rapporte le plus de points."}</h1>
+    <div className="container focus-page">
+      <header className="page-head page-head-compact">
+        <div className="eyebrow">{reviewMode ? "Carnet d’erreurs" : `Séance adaptative · ${dailyMinutes} minutes`}</div>
+        <h1>{reviewMode ? "Réactive les notions qui t’ont déjà piégé." : "Une seule priorité à la fois."}</h1>
         <p>
           {reviewMode
-            ? "Les erreurs non maîtrisées reviennent selon leur date de révision et disparaissent après plusieurs réussites."
-            : "La séance combine tes faiblesses, les erreurs arrivées à échéance et évite autant que possible les questions vues pendant les 14 derniers jours."}
+            ? "Les erreurs reviennent à leur date de révision et disparaissent après plusieurs réussites stables."
+            : "La séance privilégie les faiblesses utiles, les erreurs arrivées à échéance et évite les répétitions trop récentes."}
         </p>
       </header>
 
       {access && !access.isPremium ? (
-        <div className="quota-strip">
-          <strong>Compte gratuit</strong>
-          <span>{access.practice.used}/{access.practice.limit} séance utilisée aujourd’hui</span>
-          <a href="/pricing">Débloquer les séances illimitées →</a>
-        </div>
+        <div className="quota-strip"><strong>Compte gratuit</strong><span>{access.practice.used}/{access.practice.limit} séance utilisée aujourd’hui</span><a href="/pricing">Voir les accès Premium →</a></div>
       ) : access?.isPremium ? (
         <div className="quota-strip quota-strip-premium"><strong>Premium</strong><span>Séances illimitées activées</span></div>
       ) : null}
 
-      {!practiceReady ? (
-        <div className="alert alert-warning">
-          Les migrations de l’entraînement ou des statistiques ne sont pas encore accessibles. Exécute les nouveaux scripts SQL avant de répondre.
-        </div>
-      ) : null}
-      {!accessReady ? (
-        <div className="alert alert-warning">La migration des quotas gratuits n’est pas encore accessible. Exécute le nouveau script SQL.</div>
-      ) : null}
+      {!practiceReady ? <div className="alert alert-warning">Les données d’entraînement ne sont pas encore accessibles.</div> : null}
+      {!accessReady ? <div className="alert alert-warning">Les quotas gratuits ne sont pas encore accessibles.</div> : null}
 
       {blocked ? (
-        <UpgradeGate
-          title="Ta séance gratuite du jour est terminée."
-          message="Le compte gratuit comprend une séance adaptative ou une révision d’erreurs par jour. Premium supprime cette limite."
-          resetMessage="Ton quota gratuit sera réinitialisé demain."
-        />
+        <UpgradeGate title="Ta séance gratuite du jour est terminée." message="Le compte gratuit comprend une séance adaptative ou une révision d’erreurs par jour." resetMessage="Ton quota gratuit sera réinitialisé demain." />
       ) : accessReady ? (
         <PracticeRunner questions={questions} reviewMode={reviewMode} plannedMinutes={dailyMinutes} />
       ) : null}
