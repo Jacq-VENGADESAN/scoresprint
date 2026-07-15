@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
+import { QuestionReportButton } from "@/components/question-report-button";
 import type { PublicPracticeQuestion } from "@/lib/practice-bank";
 
 type AnswerResult = {
@@ -253,18 +254,21 @@ export function PracticeRunner({
       {error ? <div className="alert alert-error" style={{ marginTop: 18 }}>{error}</div> : null}
 
       {result ? (
-        <div className={`answer-feedback ${result.isCorrect ? "answer-feedback-correct" : "answer-feedback-wrong"}`}>
-          <h3>{result.isCorrect ? "Bonne réponse." : `La bonne réponse était ${result.correctOptionId}.`}</h3>
-          <p><strong>Pourquoi ton choix :</strong> {result.selectedFeedback}</p>
-          <p><strong>Règle à retenir :</strong> {result.explanation}</p>
-          <p><strong>Piège :</strong> {result.trap}</p>
-          <div className="mastery-change">
-            Maîtrise estimée : <strong>{Math.round(result.masteryBefore)}% → {Math.round(result.masteryAfter)}%</strong>
-            <div className="score-confidence">Confiance {result.confidence} · {result.evidenceCount} réponses observées</div>
+        <>
+          <div className={`answer-feedback ${result.isCorrect ? "answer-feedback-correct" : "answer-feedback-wrong"}`}>
+            <h3>{result.isCorrect ? "Bonne réponse." : `La bonne réponse était ${result.correctOptionId}.`}</h3>
+            <p><strong>Pourquoi ton choix :</strong> {result.selectedFeedback}</p>
+            <p><strong>Règle à retenir :</strong> {result.explanation}</p>
+            <p><strong>Piège :</strong> {result.trap}</p>
+            <div className="mastery-change">
+              Maîtrise estimée : <strong>{Math.round(result.masteryBefore)}% → {Math.round(result.masteryAfter)}%</strong>
+              <div className="score-confidence">Confiance {result.confidence} · {result.evidenceCount} réponses observées</div>
+            </div>
+            {result.resolved ? <div className="review-note">Cette erreur est désormais considérée comme maîtrisée.</div> : null}
+            {reviewDate ? <div className="review-note">Prochaine révision prévue le {reviewDate}.</div> : null}
           </div>
-          {result.resolved ? <div className="review-note">Cette erreur est désormais considérée comme maîtrisée.</div> : null}
-          {reviewDate ? <div className="review-note">Prochaine révision prévue le {reviewDate}.</div> : null}
-        </div>
+          <QuestionReportButton questionCode={question.id} selectedOption={selected} />
+        </>
       ) : null}
 
       <div className="question-actions">

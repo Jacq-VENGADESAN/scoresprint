@@ -41,6 +41,7 @@ export function AdminQuestionForm({ initial = EMPTY_QUESTION, questionId }: Prop
   const [form, setForm] = useState<ManagedQuestionInput>(initial);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [preview, setPreview] = useState(false);
 
   function setField<K extends keyof ManagedQuestionInput>(key: K, value: ManagedQuestionInput[K]) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -81,61 +82,79 @@ export function AdminQuestionForm({ initial = EMPTY_QUESTION, questionId }: Prop
     }
   }
 
+  const skillLabel = MANAGED_SKILLS.find((skill) => skill.id === form.skillId)?.label ?? form.skillId;
+
   return (
-    <form className="card admin-question-form" onSubmit={submit}>
-      {error ? <div className="alert alert-error">{error}</div> : null}
+    <>
+      <form className="card admin-question-form" onSubmit={submit}>
+        {error ? <div className="alert alert-error">{error}</div> : null}
 
-      <section className="admin-form-section">
-        <div className="admin-form-section-head">
-          <div><span className="eyebrow">Identification</span><h2>Classement de la question</h2></div>
-          <select value={form.status} onChange={(event) => setField("status", event.target.value as ManagedQuestionInput["status"])}>
-            {MANAGED_STATUSES.map((status) => <option value={status.id} key={status.id}>{status.label}</option>)}
-          </select>
+        <section className="admin-form-section">
+          <div className="admin-form-section-head">
+            <div><span className="eyebrow">Identification</span><h2>Classement de la question</h2></div>
+            <select value={form.status} onChange={(event) => setField("status", event.target.value as ManagedQuestionInput["status"])}>
+              {MANAGED_STATUSES.map((status) => <option value={status.id} key={status.id}>{status.label}</option>)}
+            </select>
+          </div>
+          <div className="admin-form-grid admin-form-grid-four">
+            <label>Code unique<input required value={form.code} onChange={(event) => setField("code", event.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-"))} placeholder="db-structure-001" /></label>
+            <label>Partie<select value={form.part} onChange={(event) => setField("part", Number(event.target.value))}><option value={5}>Partie 5</option><option value={6}>Partie 6</option><option value={7}>Partie 7</option></select></label>
+            <label>Difficulté<select value={form.difficulty} onChange={(event) => setField("difficulty", Number(event.target.value))}>{[1, 2, 3, 4, 5].map((value) => <option value={value} key={value}>{value}/5</option>)}</select></label>
+            <label>Temps cible (secondes)<input type="number" min={5} max={600} value={form.targetTimeSeconds} onChange={(event) => setField("targetTimeSeconds", Number(event.target.value))} /></label>
+          </div>
+          <div className="admin-form-grid">
+            <label>Compétence<select value={form.skillId} onChange={(event) => setField("skillId", event.target.value)}>{MANAGED_SKILLS.map((skill) => <option value={skill.id} key={skill.id}>{skill.label}</option>)}</select></label>
+            <label>Sous-compétence<input required value={form.subskill} onChange={(event) => setField("subskill", event.target.value)} placeholder="Accord sujet-verbe" /></label>
+          </div>
+        </section>
+
+        <section className="admin-form-section">
+          <span className="eyebrow">Contenu</span>
+          <h2>Énoncé et contexte</h2>
+          <label>Contexte facultatif<textarea rows={5} value={form.context} onChange={(event) => setField("context", event.target.value)} placeholder="Texte, e-mail, annonce ou passage de lecture..." /></label>
+          <label>Question<textarea required rows={3} value={form.prompt} onChange={(event) => setField("prompt", event.target.value)} placeholder="Écris l’énoncé complet." /></label>
+        </section>
+
+        <section className="admin-form-section">
+          <span className="eyebrow">Réponses</span>
+          <h2>Quatre options et une seule bonne réponse</h2>
+          <div className="admin-options-list">
+            {form.options.map((option, index) => (
+              <div className={`admin-option-editor ${option.isCorrect ? "admin-option-correct" : ""}`} key={option.key}>
+                <label className="admin-correct-choice"><input type="radio" name="correctOption" checked={option.isCorrect} onChange={() => setCorrectOption(index)} /> Bonne réponse {option.key}</label>
+                <input required value={option.text} onChange={(event) => updateOption(index, { text: event.target.value })} placeholder={`Texte de la réponse ${option.key}`} />
+                <textarea rows={2} value={option.feedback} onChange={(event) => updateOption(index, { feedback: event.target.value })} placeholder="Retour affiché lorsque cette option est choisie" />
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="admin-form-section">
+          <span className="eyebrow">Correction</span>
+          <h2>Explication pédagogique</h2>
+          <label>Règle et explication<textarea required rows={5} value={form.explanation} onChange={(event) => setField("explanation", event.target.value)} placeholder="Explique précisément pourquoi la réponse est correcte." /></label>
+          <label>Piège à éviter<textarea rows={3} value={form.trap} onChange={(event) => setField("trap", event.target.value)} placeholder="Décris l’erreur fréquente ou le faux ami." /></label>
+        </section>
+
+        <div className="admin-form-actions">
+          <button className="btn btn-primary" type="submit" disabled={saving}>{saving ? "Enregistrement..." : questionId ? "Enregistrer les modifications" : "Créer la question"}</button>
+          <button className="btn btn-secondary" type="button" onClick={() => setPreview((current) => !current)}>{preview ? "Masquer l’aperçu" : "Aperçu avant publication"}</button>
+          <button className="btn btn-secondary" type="button" onClick={() => router.push("/admin/questions")}>Annuler</button>
         </div>
-        <div className="admin-form-grid admin-form-grid-four">
-          <label>Code unique<input required value={form.code} onChange={(event) => setField("code", event.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-"))} placeholder="db-structure-001" /></label>
-          <label>Partie<select value={form.part} onChange={(event) => setField("part", Number(event.target.value))}><option value={5}>Partie 5</option><option value={6}>Partie 6</option><option value={7}>Partie 7</option></select></label>
-          <label>Difficulté<select value={form.difficulty} onChange={(event) => setField("difficulty", Number(event.target.value))}>{[1, 2, 3, 4, 5].map((value) => <option value={value} key={value}>{value}/5</option>)}</select></label>
-          <label>Temps cible (secondes)<input type="number" min={5} max={600} value={form.targetTimeSeconds} onChange={(event) => setField("targetTimeSeconds", Number(event.target.value))} /></label>
-        </div>
-        <div className="admin-form-grid">
-          <label>Compétence<select value={form.skillId} onChange={(event) => setField("skillId", event.target.value)}>{MANAGED_SKILLS.map((skill) => <option value={skill.id} key={skill.id}>{skill.label}</option>)}</select></label>
-          <label>Sous-compétence<input required value={form.subskill} onChange={(event) => setField("subskill", event.target.value)} placeholder="Accord sujet-verbe" /></label>
-        </div>
-      </section>
+      </form>
 
-      <section className="admin-form-section">
-        <span className="eyebrow">Contenu</span>
-        <h2>Énoncé et contexte</h2>
-        <label>Contexte facultatif<textarea rows={5} value={form.context} onChange={(event) => setField("context", event.target.value)} placeholder="Texte, e-mail, annonce ou passage de lecture..." /></label>
-        <label>Question<textarea required rows={3} value={form.prompt} onChange={(event) => setField("prompt", event.target.value)} placeholder="Écris l’énoncé complet." /></label>
-      </section>
-
-      <section className="admin-form-section">
-        <span className="eyebrow">Réponses</span>
-        <h2>Quatre options et une seule bonne réponse</h2>
-        <div className="admin-options-list">
-          {form.options.map((option, index) => (
-            <div className={`admin-option-editor ${option.isCorrect ? "admin-option-correct" : ""}`} key={option.key}>
-              <label className="admin-correct-choice"><input type="radio" name="correctOption" checked={option.isCorrect} onChange={() => setCorrectOption(index)} /> Bonne réponse {option.key}</label>
-              <input required value={option.text} onChange={(event) => updateOption(index, { text: event.target.value })} placeholder={`Texte de la réponse ${option.key}`} />
-              <textarea rows={2} value={option.feedback} onChange={(event) => updateOption(index, { feedback: event.target.value })} placeholder="Retour affiché lorsque cette option est choisie" />
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="admin-form-section">
-        <span className="eyebrow">Correction</span>
-        <h2>Explication pédagogique</h2>
-        <label>Règle et explication<textarea required rows={5} value={form.explanation} onChange={(event) => setField("explanation", event.target.value)} placeholder="Explique précisément pourquoi la réponse est correcte." /></label>
-        <label>Piège à éviter<textarea rows={3} value={form.trap} onChange={(event) => setField("trap", event.target.value)} placeholder="Décris l’erreur fréquente ou le faux ami." /></label>
-      </section>
-
-      <div className="admin-form-actions">
-        <button className="btn btn-primary" type="submit" disabled={saving}>{saving ? "Enregistrement..." : questionId ? "Enregistrer les modifications" : "Créer la question"}</button>
-        <button className="btn btn-secondary" type="button" onClick={() => router.push("/admin/questions")}>Annuler</button>
-      </div>
-    </form>
+      {preview ? (
+        <section className="card admin-question-preview">
+          <div className="question-meta"><span className="badge">Partie {form.part}</span><span className="badge">{skillLabel}</span><span className="badge">Difficulté {form.difficulty}/5</span></div>
+          <div className="question-subskill">{form.subskill || "Sous-compétence non renseignée"}</div>
+          {form.context ? <div className="reading-context">{form.context}</div> : null}
+          <div className="question-text">{form.prompt || "L’énoncé apparaîtra ici."}</div>
+          <div className="options admin-preview-options">
+            {form.options.map((option) => <div className={`option ${option.isCorrect ? "correct" : ""}`} key={option.key}><strong>{option.key}.</strong> {option.text || "Réponse vide"}</div>)}
+          </div>
+          <div className="answer-feedback answer-feedback-correct"><h3>Correction affichée après réponse</h3><p><strong>Règle :</strong> {form.explanation || "Explication non renseignée."}</p><p><strong>Piège :</strong> {form.trap || "Aucun piège renseigné."}</p></div>
+        </section>
+      ) : null}
+    </>
   );
 }

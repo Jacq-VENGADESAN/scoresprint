@@ -13,7 +13,9 @@ ScoreSprint est une plateforme indépendante de préparation adaptative à l’a
 - 100 questions originales au total ;
 - banque de questions supplémentaire gérée dans Supabase ;
 - espace administrateur pour créer, relire, publier et archiver des questions ;
-- statistiques de réussite par question ;
+- import CSV transactionnel jusqu’à 500 questions ;
+- aperçu, filtres, duplication et détection des codes en double ;
+- statistiques de réussite et signalements par question ;
 - offre gratuite avec quotas contrôlés côté serveur ;
 - accès Premium de 30 ou 90 jours ;
 - Stripe Checkout hébergé pour les paiements uniques ;
@@ -65,11 +67,14 @@ Dans **Supabase → SQL Editor**, exécuter dans cet ordre :
 6. `20260713233000_calibrated_mastery_mini_exams.sql` ;
 7. `20260714113000_free_tier_usage_limits.sql` ;
 8. `20260714173000_stripe_checkout_payments.sql` ;
-9. `20260714210000_content_admin_platform.sql`.
+9. `20260714210000_content_admin_platform.sql` ;
+10. `20260714230000_bulk_import_quality_tools.sql`.
 
 La huitième migration complète `subscriptions` et crée `activate_stripe_purchase`, une fonction transactionnelle qui empêche la double activation d’un même paiement et prolonge correctement un accès existant.
 
 La neuvième migration transforme les tables `questions` et `question_options` en catalogue administrable, protège les corrections de tout accès direct, ajoute les champs de contexte et de feedback, puis crée la fonction transactionnelle `save_managed_question`.
+
+La dixième migration ajoute `question_reports` et la fonction transactionnelle `import_managed_questions`. Un import est intégralement annulé si une ligne est invalide ou si un code existe déjà.
 
 ## Administration du contenu
 
@@ -80,6 +85,20 @@ Après avoir configuré `ADMIN_EMAILS`, ouvrir :
 ```
 
 Une question peut rester en brouillon, passer en relecture, être publiée ou archivée. Dès qu’elle est publiée, elle rejoint automatiquement la sélection des séances adaptatives sans nouveau déploiement Vercel.
+
+L’import massif est disponible dans :
+
+```text
+/admin/questions/import
+```
+
+Télécharger le modèle CSV depuis cette page. Les colonnes obligatoires comprennent le code, la partie, la compétence, les quatre réponses, la lettre correcte, l’explication et le statut. Les contenus complexes peuvent être entourés de guillemets CSV.
+
+Les utilisateurs peuvent signaler une question après sa correction. Les administrateurs traitent ces retours dans :
+
+```text
+/admin/reports
+```
 
 Chaque modification remplace atomiquement les quatre options et ajoute une entrée dans `question_admin_events`. Les bonnes réponses et explications sont chargées uniquement sur le serveur avec la clé `service_role`.
 
@@ -133,7 +152,8 @@ Un nouvel achat effectué pendant une période Premium ajoute sa durée après l
 - la clé Supabase `service_role` reste uniquement côté serveur ;
 - les achats sont idempotents grâce à l’identifiant unique de la Checkout Session ;
 - les tables contenant les bonnes réponses n’accordent aucun accès direct aux utilisateurs ;
-- chaque route d’administration vérifie l’adresse du compte authentifié.
+- chaque route d’administration vérifie l’adresse du compte authentifié ;
+- les imports sont limités à 500 questions et validés avant écriture.
 
 ## Vérifications
 
