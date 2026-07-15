@@ -11,11 +11,11 @@ function formatDate(value: string | null) {
 
 function UsageCard({ label, used, limit, period }: { label: string; used: number; limit: number | null; period: string }) {
   const unlimited = limit === null;
-  const percentage = unlimited ? 0 : Math.min(100, Math.round((used / Math.max(1, limit)) * 100));
+  const percentage = unlimited ? 100 : Math.min(100, Math.round((used / Math.max(1, limit)) * 100));
   return (
     <div className="usage-card">
       <div className="usage-card-head"><strong>{label}</strong><span>{unlimited ? "Illimité" : `${used}/${limit}`}</span></div>
-      {!unlimited ? <div className="usage-meter"><div style={{ width: `${percentage}%` }} /></div> : null}
+      <div className="usage-meter" aria-label={unlimited ? `${label} illimité` : `${percentage}% du quota utilisé`}><div style={{ width: `${percentage}%` }} /></div>
       <small>{period}</small>
     </div>
   );
@@ -39,8 +39,8 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
   } catch {
     return (
       <div className="container account-page">
-        <header className="page-head"><div className="eyebrow">Mon accès</div><h1>Ton compte ScoreSprint</h1></header>
-        <div className="alert alert-warning">Les migrations des accès ou des paiements ne sont pas encore accessibles.</div>
+        <header className="page-head"><div><div className="eyebrow">Mon compte</div><h1>Ton espace ScoreSprint</h1></div></header>
+        <div className="alert alert-warning">Les informations d’accès ou de paiement ne sont pas encore accessibles.</div>
       </div>
     );
   }
@@ -48,15 +48,19 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
   const portalMessage = params.portal === "unavailable"
     ? "Aucun compte de paiement Stripe n’est encore associé à ce compte."
     : params.portal === "error"
-      ? "Le portail Stripe n’a pas pu être ouvert. Vérifie sa configuration dans Stripe."
+      ? "Le portail Stripe n’a pas pu être ouvert. Vérifie sa configuration puis réessaie."
       : null;
+  const displayName = user.user_metadata?.display_name ?? user.email?.split("@")[0] ?? "Utilisateur";
 
   return (
     <div className="container account-page">
       <header className="page-head">
-        <div className="eyebrow">Mon accès</div>
-        <h1>Gère ton niveau d’accès et suis tes quotas.</h1>
-        <p>Les limites et les activations Premium sont vérifiées côté serveur.</p>
+        <div>
+          <div className="eyebrow">Mon compte</div>
+          <h1>Bonjour {displayName}, gère ton accès sans ambiguïté.</h1>
+          <p>Ton plan, tes quotas et tes paiements sont regroupés au même endroit.</p>
+        </div>
+        <Link href="/dashboard" className="btn btn-secondary">Retour au tableau de bord</Link>
       </header>
 
       {portalMessage ? <div className="alert alert-warning">{portalMessage}</div> : null}
@@ -64,35 +68,47 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
       <section className={`card account-plan-card ${access.isPremium ? "account-plan-premium" : ""}`}>
         <div>
           <span className="badge">{accessLabel(access)}</span>
-          <h2>{access.isPremium ? "Ton accès Premium est actif." : "Tu utilises actuellement l’offre gratuite."}</h2>
+          <h2>{access.isPremium ? "Ton accès Premium est actif." : "Tu utilises l’accès gratuit."}</h2>
           <p className="muted-copy">
             {access.isPremium
-              ? `Accès valable jusqu’au ${formatDate(access.accessEndsAt)}. Un nouvel achat prolonge l’accès à partir de cette date.`
-              : "Tu peux découvrir le diagnostic, travailler chaque jour et mesurer ton niveau avant de choisir une formule payante."}
+              ? `Toutes les fonctionnalités sont disponibles jusqu’au ${formatDate(access.accessEndsAt)}. Un nouvel achat ajoutera sa durée après cette date.`
+              : "Tu peux faire le diagnostic, une séance par jour et un mini-examen par mois. Aucun renouvellement automatique n’est associé à ton compte."}
           </p>
         </div>
-        <Link href="/pricing" className="btn btn-primary">{access.isPremium ? "Prolonger mon accès" : "Passer à Premium"}</Link>
+        <Link href="/pricing" className="btn btn-primary">{access.isPremium ? "Prolonger mon accès" : "Comparer les accès"}</Link>
       </section>
 
       <section className="card panel account-usage-panel">
-        <div className="panel-title"><h2>Utilisation actuelle</h2><span className="badge">Mise à jour en temps réel</span></div>
+        <div className="panel-title">
+          <div><h2>Utilisation actuelle</h2><p className="muted-copy" style={{ margin: "4px 0 0", fontSize: ".84rem" }}>Les quotas sont vérifiés côté serveur et se mettent à jour après chaque activité.</p></div>
+          <span className="badge">Temps réel</span>
+        </div>
         <div className="usage-grid">
-          <UsageCard label="Séances aujourd’hui" used={access.practice.used} limit={access.practice.limit} period={access.isPremium ? "Aucune limite quotidienne" : "Réinitialisation chaque jour"} />
+          <UsageCard label="Séances aujourd’hui" used={access.practice.used} limit={access.practice.limit} period={access.isPremium ? "Aucune limite quotidienne" : "Réinitialisation demain"} />
           <UsageCard label="Mini-examens ce mois-ci" used={access.miniExam.used} limit={access.miniExam.limit} period={access.isPremium ? "Aucune limite mensuelle" : "Réinitialisation au début du mois"} />
-          <UsageCard label="Historique" used={access.historyDays ?? 0} limit={access.historyDays} period={access.historyDays === null ? "Historique complet" : `${access.historyDays} derniers jours accessibles`} />
+          <UsageCard label="Historique accessible" used={access.historyDays ?? 0} limit={access.historyDays} period={access.historyDays === null ? "Toutes les activités restent disponibles" : `${access.historyDays} derniers jours`} />
         </div>
       </section>
 
       <section className="card panel billing-foundation-note">
         <div>
-          <h2>Paiements sécurisés par Stripe</h2>
-          <p className="muted-copy">ScoreSprint ne stocke aucune donnée bancaire. Stripe gère le paiement, les reçus et l’historique de facturation.</p>
+          <h2>Paiements et reçus</h2>
+          <p className="muted-copy">Stripe héberge le paiement et conserve les reçus. ScoreSprint ne stocke aucune donnée bancaire.</p>
         </div>
         <div className="account-billing-actions">
           {stripeIsConfigured() && hasStripeCustomer ? (
-            <form action="/api/billing/portal" method="post"><button type="submit" className="btn btn-secondary">Gérer mes paiements</button></form>
+            <form action="/api/billing/portal" method="post"><button type="submit" className="btn btn-secondary">Ouvrir le portail Stripe</button></form>
           ) : null}
-          <Link href="/dashboard" className="btn btn-secondary">Retour à ma progression</Link>
+          <Link href="/pricing" className="btn btn-secondary">Voir les tarifs</Link>
+        </div>
+      </section>
+
+      <section className="card panel" style={{ marginTop: 20 }}>
+        <div className="panel-title"><div><h2>Identité du compte</h2><p className="muted-copy" style={{ margin: "4px 0 0", fontSize: ".84rem" }}>Ces informations permettent de retrouver ton espace.</p></div></div>
+        <div className="stats">
+          <div className="stat"><div className="stat-label">Nom affiché</div><div className="stat-value" style={{ fontSize: "1.1rem" }}>{displayName}</div></div>
+          <div className="stat"><div className="stat-label">Adresse e-mail</div><div className="stat-value" style={{ fontSize: "1rem", overflowWrap: "anywhere" }}>{user.email ?? "—"}</div></div>
+          <div className="stat"><div className="stat-label">État de l’accès</div><div className="stat-value" style={{ fontSize: "1.1rem" }}>{access.isPremium ? "Premium" : "Gratuit"}</div></div>
         </div>
       </section>
     </div>
