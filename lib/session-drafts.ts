@@ -28,6 +28,8 @@ export type PracticeDraftState = {
   sessionId: string | null;
   startedAt: string;
   questionStartedAt: string;
+  elapsedMs: number;
+  questionElapsedMs: number;
 };
 
 export type MiniExamDraftState = {
