@@ -3,6 +3,8 @@
 .price-card .btn, .price-card form { width: 100%; }
 .price-card .muted-copy { min-height: 74px; }
 .mobile-nav-actions form, .mobile-nav-actions form .btn { width: 100%; }
+.account-popover svg { width: 18px; height: 18px; flex: 0 0 auto; }
+.auth-benefit-icon svg { width: 16px; height: 16px; }
 
 .score-curve { margin-top: 24px; padding: 18px; border: 1px solid var(--line); border-radius: 14px; background: #fafaf7; }
 .score-curve svg { width: 100%; height: 180px; overflow: visible; color: var(--ink-soft); }
@@ -90,6 +92,8 @@
 }
 
 @media (max-width: 700px) {
+  .question-shell { overflow: visible; }
+  .session-progress, .diagnostic-progress { border-radius: 16px 16px 0 0; }
   .exam-rules { grid-template-columns: 1fr; }
   .diagnostic-actions { flex-direction: column; }
   .diagnostic-actions .btn { width: 100%; }
@@ -100,6 +104,7 @@
   .history-summary { align-items: stretch; flex-direction: column; }
   .history-summary-actions { flex-direction: column; }
   .history-summary-actions .btn { width: 100%; }
-  .history-filter-tabs { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; }
+  .history-filter-tabs { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+  .history-filter-tabs::-webkit-scrollbar { display: none; }
   .history-filter-tabs a { flex: 0 0 auto; }
 }
