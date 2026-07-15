@@ -1,44 +1,29 @@
 import Link from "next/link";
 import { isAdminUser } from "@/lib/admin";
 import { getCurrentUser } from "@/lib/supabase-server";
+import { SiteNavigation } from "@/components/site-navigation";
 
-const links = [
-  ["Diagnostic", "/diagnostic"],
-  ["Entraînement", "/practice"],
-  ["Mini-examen", "/mock-exam"],
-  ["Progression", "/dashboard"],
-  ["Historique", "/history"],
-  ["Tarifs", "/pricing"]
-] as const;
+function SprintMark() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M5 16.5 10 12l3 2.5L19 8" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M15 8h4v4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
 
 export async function Header() {
   const user = await getCurrentUser();
-  const admin = isAdminUser(user);
+  const displayName = user?.user_metadata?.display_name ?? user?.email?.split("@")[0] ?? "Mon compte";
 
   return (
     <header className="site-header">
       <div className="container header-inner">
-        <Link href="/" className="brand-link">
-          Score<span> Sprint</span>
+        <Link href={user ? "/dashboard" : "/"} className="brand-link" aria-label="ScoreSprint — accueil">
+          <span className="brand-mark"><SprintMark /></span>
+          <span className="brand-wordmark">Score<span>Sprint</span></span>
         </Link>
-        <nav className="main-nav" aria-label="Navigation principale">
-          {links.map(([label, href]) => (
-            <Link key={href} href={href} className="nav-link">{label}</Link>
-          ))}
-          {admin ? <Link href="/admin/questions" className="nav-link">Admin</Link> : null}
-          {user ? (
-            <>
-              <Link href="/account" className="header-user" title="Voir mon accès et mes quotas">
-                {user.user_metadata?.display_name ?? user.email ?? "Mon accès"}
-              </Link>
-              <form action="/api/auth/logout" method="post">
-                <button className="btn btn-secondary compact-btn" type="submit">Déconnexion</button>
-              </form>
-            </>
-          ) : (
-            <Link className="btn btn-primary compact-btn" href="/auth">Connexion</Link>
-          )}
-        </nav>
+        <SiteNavigation authenticated={Boolean(user)} admin={isAdminUser(user)} displayName={displayName} />
       </div>
     </header>
   );
