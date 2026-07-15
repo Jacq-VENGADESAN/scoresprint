@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { DiagnosticAnswerInput, PublicDiagnosticQuestion, SkillDiagnosticResult } from "@/lib/diagnostic-bank";
 
 type DiagnosticResult = {
@@ -66,17 +66,33 @@ export function DiagnosticRunner({ questions }: { questions: PublicDiagnosticQue
     }
   }
 
+  useEffect(() => {
+    function handleKeyboard(event: KeyboardEvent) {
+      const target = event.target as HTMLElement | null;
+      if (target?.matches("input, textarea, select, button") || event.metaKey || event.ctrlKey || event.altKey) return;
+
+      const optionKey = event.key.toUpperCase();
+      if (question && ["A", "B", "C", "D"].includes(optionKey)) {
+        const option = question.options.find((item) => item.id === optionKey);
+        if (option) setSelectedOptionId(option.id);
+        return;
+      }
+      if (event.key === "Enter" && selectedOptionId && !submitting) void saveAnswer();
+    }
+
+    window.addEventListener("keydown", handleKeyboard);
+    return () => window.removeEventListener("keydown", handleKeyboard);
+  });
+
   if (result) {
     const weakest = result.skillBreakdown.slice(0, 3);
     const strongest = [...result.skillBreakdown].sort((a, b) => b.mastery - a.mastery)[0];
 
     return (
-      <section className="card diagnostic-result">
+      <section className="card diagnostic-result" aria-live="polite">
         <div className="eyebrow">Diagnostic terminé</div>
         <h2>Ton niveau est estimé entre {result.scoreLow} et {result.scoreHigh}.</h2>
-        <p className="diagnostic-disclaimer">
-          Cette fourchette est indicative : elle provient d’un diagnostic court et ne correspond pas à un score officiel.
-        </p>
+        <p className="diagnostic-disclaimer">Cette fourchette provient d’un diagnostic court. Elle s’affinera avec les séances et les mini-examens.</p>
 
         <div className="stats diagnostic-stats">
           <div className="stat"><div className="stat-label">Estimation centrale</div><div className="stat-value">{result.estimatedScore}</div></div>
@@ -84,14 +100,11 @@ export function DiagnosticRunner({ questions }: { questions: PublicDiagnosticQue
           <div className="stat"><div className="stat-label">Meilleur domaine</div><div className="stat-value diagnostic-skill-value">{strongest?.label ?? "—"}</div></div>
         </div>
 
-        <h3>Priorités détectées</h3>
+        <h3>Les trois priorités de ton programme</h3>
         <div className="diagnostic-breakdown">
-          {weakest.map((skill) => (
+          {weakest.map((skill, priorityIndex) => (
             <div className="diagnostic-skill" key={skill.skillId}>
-              <div>
-                <strong>{skill.label}</strong>
-                <span>{skill.correct}/{skill.total} réponses correctes</span>
-              </div>
+              <div><strong>{priorityIndex + 1}. {skill.label}</strong><span>{skill.correct}/{skill.total} réponses correctes</span></div>
               <strong>{skill.mastery}%</strong>
             </div>
           ))}
@@ -105,39 +118,42 @@ export function DiagnosticRunner({ questions }: { questions: PublicDiagnosticQue
     );
   }
 
-  if (!question) {
-    return <div className="alert alert-warning">Aucune question n’est disponible pour le moment.</div>;
-  }
+  if (!question) return <div className="alert alert-warning">Aucune question n’est disponible pour le moment.</div>;
 
   return (
     <section className="card question-shell diagnostic-shell">
-      <div className="diagnostic-progress" aria-label={`Progression : ${progress}%`}>
-        <div style={{ width: `${progress}%` }} />
-      </div>
-      <div className="question-meta">
-        <span className="badge">Partie {question.part}</span>
-        <span className="badge">{question.skillLabel}</span>
-        <span className="badge">Question {index + 1} / {questions.length}</span>
-      </div>
-      <div className="question-text" style={{ whiteSpace: "pre-line" }}>{question.prompt}</div>
-      <div className="options">
-        {question.options.map((option) => (
-          <button
-            className={`option ${selectedOptionId === option.id ? "selected" : ""}`}
-            key={option.id}
-            type="button"
-            onClick={() => setSelectedOptionId(option.id)}
-            aria-pressed={selectedOptionId === option.id}
-          >
-            <strong style={{ marginRight: 10 }}>{option.id}.</strong>{option.text}
+      <div className="diagnostic-progress" aria-label={`Progression : ${progress}%`}><div style={{ width: `${Math.max(4, progress)}%` }} /></div>
+      <div className="question-body">
+        <div className="question-header">
+          <div className="question-meta">
+            <span className="badge">Partie {question.part}</span>
+            <span className="badge">{question.skillLabel}</span>
+          </div>
+          <span className="question-counter">Question {index + 1} sur {questions.length}</span>
+        </div>
+        <div className="question-text" style={{ whiteSpace: "pre-line" }}>{question.prompt}</div>
+        <div className="options" role="group" aria-label="Choix de réponse">
+          {question.options.map((option) => (
+            <button
+              className={`option ${selectedOptionId === option.id ? "selected" : ""}`}
+              key={option.id}
+              type="button"
+              onClick={() => setSelectedOptionId(option.id)}
+              aria-pressed={selectedOptionId === option.id}
+            >
+              <span className="option-letter">{option.id}</span>
+              <span className="option-copy">{option.text}</span>
+              <span className="option-shortcut">Touche {option.id}</span>
+            </button>
+          ))}
+        </div>
+        {error ? <div className="alert alert-error" style={{ marginTop: 18 }}>{error}</div> : null}
+        <div className="question-actions">
+          <span className="question-action-hint">Utilise A–D pour choisir, puis Entrée.</span>
+          <button className="btn btn-primary" type="button" disabled={!selectedOptionId || submitting} onClick={saveAnswer}>
+            {submitting ? "Analyse en cours…" : index === questions.length - 1 ? "Terminer et analyser" : "Question suivante"}
           </button>
-        ))}
-      </div>
-      {error ? <div className="alert alert-error" style={{ marginTop: 18 }}>{error}</div> : null}
-      <div className="question-actions">
-        <button className="btn btn-primary" type="button" disabled={!selectedOptionId || submitting} onClick={saveAnswer}>
-          {submitting ? "Analyse en cours…" : index === questions.length - 1 ? "Terminer et analyser" : "Question suivante"}
-        </button>
+        </div>
       </div>
     </section>
   );
