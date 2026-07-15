@@ -9,6 +9,7 @@ import "./billing.css";
 import "./admin.css";
 import "./admin-quality.css";
 import "./product-ui.css";
+import "./product-polish.css";
 import { Header } from "@/components/header";
 
 export const metadata: Metadata = {
