@@ -10,7 +10,9 @@ ScoreSprint est une plateforme indépendante de préparation adaptative à l’a
 - séance quotidienne adaptative et carnet d’erreurs ;
 - mini-examen original de 30 questions chronométré ;
 - historique détaillé et statistiques ;
-- 100 questions originales au total ;
+- environ 300 questions originales au total ;
+- lot administrable de 200 questions : 80 en partie 5, 50 en partie 6 et 70 en partie 7 ;
+- installation en un clic de la banque depuis l’espace administrateur ;
 - banque de questions supplémentaire gérée dans Supabase ;
 - espace administrateur pour créer, relire, publier et archiver des questions ;
 - import CSV transactionnel jusqu’à 500 questions ;
@@ -76,6 +78,8 @@ La neuvième migration transforme les tables `questions` et `question_options` e
 
 La dixième migration ajoute `question_reports` et la fonction transactionnelle `import_managed_questions`. Un import est intégralement annulé si une ligne est invalide ou si un code existe déjà.
 
+Aucune migration supplémentaire n’est requise pour le lot des 200 questions. Il réutilise la fonction transactionnelle de la dixième migration.
+
 ## Administration du contenu
 
 Après avoir configuré `ADMIN_EMAILS`, ouvrir :
@@ -86,7 +90,23 @@ Après avoir configuré `ADMIN_EMAILS`, ouvrir :
 
 Une question peut rester en brouillon, passer en relecture, être publiée ou archivée. Dès qu’elle est publiée, elle rejoint automatiquement la sélection des séances adaptatives sans nouveau déploiement Vercel.
 
-L’import massif est disponible dans :
+### Installer la banque originale
+
+Ouvrir :
+
+```text
+/admin/questions/seed
+```
+
+Le bouton d’installation ajoute les questions manquantes par lots transactionnels. Les codes déjà présents sont ignorés, ce qui rend l’opération relançable sans créer de doublons. Les 200 questions sont publiées immédiatement dans Supabase :
+
+- 80 questions de partie 5 ;
+- 50 questions de partie 6 réparties dans 10 textes ;
+- 70 questions de partie 7 réparties dans 14 documents.
+
+### Import CSV facultatif
+
+L’import massif personnalisé reste disponible dans :
 
 ```text
 /admin/questions/import
@@ -153,14 +173,18 @@ Un nouvel achat effectué pendant une période Premium ajoute sa durée après l
 - les achats sont idempotents grâce à l’identifiant unique de la Checkout Session ;
 - les tables contenant les bonnes réponses n’accordent aucun accès direct aux utilisateurs ;
 - chaque route d’administration vérifie l’adresse du compte authentifié ;
-- les imports sont limités à 500 questions et validés avant écriture.
+- les imports sont limités à 500 questions et validés avant écriture ;
+- l’installation du lot ignore les codes déjà présents et découpe les écritures en lots de 50.
 
 ## Vérifications
 
 ```bash
+npm run validate:questions
 npm run typecheck
 npm run build
 ```
+
+Le contrôle de contenu vérifie le nombre de questions, la répartition 80/50/70, les codes uniques, les quatre options, l’unique bonne réponse, les champs obligatoires et l’absence d’accents mal encodés.
 
 Avant la mise en production réelle, tester tout le parcours en mode test Stripe, puis compléter les CGV, la politique de confidentialité, les obligations fiscales et les informations légales.
 
