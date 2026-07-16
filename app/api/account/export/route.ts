@@ -27,6 +27,8 @@ export async function GET() {
     scoreSnapshots,
     miniExams,
     miniExamAnswers,
+    listeningRuns,
+    listeningAttempts,
     usage,
     subscriptions,
     reports,
@@ -44,6 +46,8 @@ export async function GET() {
     safeRead(`score_snapshots?select=*&${userFilter}&order=created_at.asc`),
     safeRead(`mini_exam_runs?select=*&${userFilter}&order=completed_at.asc`),
     safeRead(`mini_exam_answers?select=*&${userFilter}&order=created_at.asc`),
+    safeRead(`listening_runs?select=*&${userFilter}&order=completed_at.asc`),
+    safeRead(`listening_attempts?select=*&${userFilter}&order=created_at.asc`),
     safeRead(`usage_counters?select=*&${userFilter}&order=period_start.asc`),
     safeRead(`subscriptions?select=plan_code,status,access_starts_at,access_ends_at,created_at&${userFilter}&order=created_at.asc`),
     safeRead(`question_reports?select=question_code,category,details,selected_option,status,created_at,reviewed_at&${userFilter}&order=created_at.asc`),
@@ -53,7 +57,7 @@ export async function GET() {
 
   const exportedAt = new Date();
   const document = {
-    exportVersion: 1,
+    exportVersion: 2,
     exportedAt: exportedAt.toISOString(),
     account: {
       id: user.id,
@@ -72,6 +76,8 @@ export async function GET() {
       scoreSnapshots,
       miniExams,
       miniExamAnswers,
+      listeningRuns,
+      listeningAttempts,
       usage,
       subscriptions,
       reports,
