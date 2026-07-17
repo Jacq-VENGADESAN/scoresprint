@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "validate:questions": "node scripts/validate-question-seed.mjs"
+    "validate:questions": "node scripts/validate-question-seed.mjs",
+    "validate:listening": "node scripts/validate-listening-bank.mjs"
   },
   "dependencies": {
     "next": "16.2.10",

@@ -19,6 +19,7 @@ type NavigationLink = {
 const privateLinks: NavigationLink[] = [
   { label: "Tableau de bord", href: "/dashboard", exact: true },
   { label: "S’entraîner", href: "/practice" },
+  { label: "Listening", href: "/listening" },
   { label: "Mes erreurs", href: "/errors" },
   { label: "Mini-examen", href: "/mock-exam" },
   { label: "Historique", href: "/history" }
