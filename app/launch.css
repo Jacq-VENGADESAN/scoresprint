@@ -65,6 +65,11 @@
 .listening-photo figcaption { display: flex; justify-content: space-between; gap: 18px; padding: 10px 14px; color: var(--muted); background: var(--surface); font-size: .74rem; }
 .listening-photo figcaption a { text-decoration: underline; text-underline-offset: 2px; }
 
+.checkout-form { display: grid; gap: 12px; }
+.checkout-consent { display: grid; grid-template-columns: 18px 1fr; align-items: start; gap: 9px; color: var(--muted-strong); font-size: .78rem; line-height: 1.42; text-align: left; }
+.checkout-consent input { width: 16px; height: 16px; margin: 2px 0 0; accent-color: var(--brand); }
+.checkout-consent a { color: var(--brand); text-decoration: underline; text-underline-offset: 2px; }
+
 .launch-checklist { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
 .launch-check { padding: 18px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface); }
 .launch-check strong { display: block; margin-bottom: 4px; }
@@ -84,4 +89,5 @@
   .training-card { min-height: 0; padding: 24px; }
   .launch-checklist { grid-template-columns: 1fr; }
   .listening-photo img { height: 310px; }
+  .listening-photo figcaption { flex-direction: column; gap: 3px; }
 }
