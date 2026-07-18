@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BRAND_NAME } from "@/lib/brand";
 
 type AuthPageProps = {
   searchParams: Promise<{ error?: string; next?: string; confirmed?: string; password?: string }>;
@@ -28,7 +29,7 @@ export default async function AuthPage({ searchParams }: AuthPageProps) {
 
         <div className="auth-content">
           <div className="auth-content-head">
-            <h2>Bienvenue sur ScoreSprint</h2>
+            <h2>Bienvenue sur {BRAND_NAME}</h2>
             <p>Connecte-toi ou crée ton espace en moins d’une minute.</p>
           </div>
 
