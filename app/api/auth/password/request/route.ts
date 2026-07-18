@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { consumeRateLimit } from "@/lib/rate-limit";
 import { requireSupabaseConfig } from "@/lib/supabase-config";
 
 export async function POST(request: Request) {
@@ -8,6 +9,12 @@ export async function POST(request: Request) {
 
   if (!email || !email.includes("@") || email.length > 320) {
     target.searchParams.set("error", "Indique une adresse e-mail valide.");
+    return NextResponse.redirect(target, 303);
+  }
+
+  const rate = await consumeRateLimit(request, { scope: "auth-recovery", subject: email, limit: 4, windowSeconds: 3600 });
+  if (!rate.allowed) {
+    target.searchParams.set("sent", "1");
     return NextResponse.redirect(target, 303);
   }
 

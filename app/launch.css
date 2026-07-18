@@ -1,0 +1,93 @@
+.site-footer {
+  margin-top: 88px;
+  border-top: 1px solid var(--line);
+  background: #111827;
+  color: #e5e7eb;
+}
+.site-footer-grid {
+  display: grid;
+  grid-template-columns: 1.5fr repeat(3, 1fr);
+  gap: 42px;
+  padding-top: 58px;
+  padding-bottom: 40px;
+}
+.site-footer h2 { margin: 0 0 14px; color: #fff; font-size: .82rem; letter-spacing: .08em; text-transform: uppercase; }
+.site-footer a { display: block; width: fit-content; margin: 8px 0; color: #d1d5db; font-size: .93rem; }
+.site-footer a:hover { color: #fff; }
+.site-footer-brand p { max-width: 430px; margin: 14px 0 0; color: #aeb6c5; }
+.footer-wordmark { color: #fff !important; font-size: 1.42rem !important; font-weight: 800; letter-spacing: -.04em; }
+.site-footer-bottom { display: grid; grid-template-columns: auto 1fr; gap: 34px; padding: 22px 0 30px; border-top: 1px solid rgba(255,255,255,.12); }
+.site-footer-bottom p { margin: 0; color: #98a2b3; font-size: .78rem; line-height: 1.55; }
+.site-footer-bottom p:last-child { justify-self: end; max-width: 720px; text-align: right; }
+
+.training-page { padding-bottom: 40px; }
+.training-intro { display: flex; align-items: flex-end; justify-content: space-between; gap: 32px; }
+.training-intro p { max-width: 700px; }
+.training-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; margin: 18px 0 34px; }
+.training-card { position: relative; overflow: hidden; min-height: 340px; padding: 32px; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); box-shadow: var(--shadow); }
+.training-card::after { content: ""; position: absolute; width: 230px; height: 230px; right: -90px; top: -100px; border-radius: 50%; background: var(--brand-soft); }
+.training-card.listening-card::after { background: var(--accent-soft); }
+.training-card > * { position: relative; z-index: 1; }
+.training-card-icon { display: grid; place-items: center; width: 48px; height: 48px; margin-bottom: 26px; border-radius: 14px; color: var(--brand); background: var(--brand-soft); font-size: 1.35rem; font-weight: 800; }
+.listening-card .training-card-icon { color: var(--accent); background: var(--accent-soft); }
+.training-card h2 { margin: 0 0 10px; font-size: clamp(1.65rem, 3vw, 2.2rem); letter-spacing: -.04em; }
+.training-card p { max-width: 510px; margin: 0 0 22px; color: var(--muted-strong); }
+.training-feature-list { display: grid; gap: 8px; margin: 0 0 26px; padding: 0; list-style: none; }
+.training-feature-list li::before { content: "✓"; margin-right: 9px; color: var(--accent); font-weight: 800; }
+.training-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.training-note { padding: 20px 22px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--soft-warm); color: var(--muted-strong); }
+
+.legal-page { max-width: 920px; padding-bottom: 40px; }
+.legal-page .page-head { padding-bottom: 18px; }
+.legal-document { display: grid; gap: 28px; padding: 34px; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); box-shadow: var(--shadow); }
+.legal-document section { padding-bottom: 24px; border-bottom: 1px solid var(--line); }
+.legal-document section:last-child { padding-bottom: 0; border-bottom: 0; }
+.legal-document h2 { margin: 0 0 10px; font-size: 1.18rem; }
+.legal-document p, .legal-document li { color: var(--muted-strong); }
+.legal-document ul { padding-left: 20px; }
+.legal-warning { padding: 15px 17px; border: 1px solid #efcf8d; border-radius: var(--radius-sm); background: var(--warning-soft); color: #7a4a0a; }
+.legal-data-list { display: grid; grid-template-columns: 220px 1fr; gap: 8px 18px; margin: 0; }
+.legal-data-list dt { color: var(--muted); font-weight: 650; }
+.legal-data-list dd { margin: 0; overflow-wrap: anywhere; }
+
+.faq-list { display: grid; gap: 12px; }
+.faq-list details { padding: 19px 21px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface); }
+.faq-list summary { cursor: pointer; font-weight: 750; }
+.faq-list p { margin: 12px 0 0; color: var(--muted-strong); }
+
+.contact-grid { display: grid; grid-template-columns: 1.2fr .8fr; gap: 22px; }
+.contact-card { padding: 28px; }
+.contact-card h2 { margin-top: 0; }
+.contact-card a { color: var(--brand); font-weight: 750; }
+
+.listening-photo { position: relative; overflow: hidden; margin: 0; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--soft); }
+.listening-photo img { display: block; width: 100%; height: min(48vw, 430px); min-height: 280px; object-fit: cover; }
+.listening-photo figcaption { display: flex; justify-content: space-between; gap: 18px; padding: 10px 14px; color: var(--muted); background: var(--surface); font-size: .74rem; }
+.listening-photo figcaption a { text-decoration: underline; text-underline-offset: 2px; }
+
+.checkout-form { display: grid; gap: 12px; }
+.checkout-consent { display: grid; grid-template-columns: 18px 1fr; align-items: start; gap: 9px; color: var(--muted-strong); font-size: .78rem; line-height: 1.42; text-align: left; }
+.checkout-consent input { width: 16px; height: 16px; margin: 2px 0 0; accent-color: var(--brand); }
+.checkout-consent a { color: var(--brand); text-decoration: underline; text-underline-offset: 2px; }
+
+.launch-checklist { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.launch-check { padding: 18px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface); }
+.launch-check strong { display: block; margin-bottom: 4px; }
+
+@media (max-width: 860px) {
+  .site-footer-grid { grid-template-columns: repeat(2, 1fr); }
+  .site-footer-bottom { grid-template-columns: 1fr; }
+  .site-footer-bottom p:last-child { justify-self: start; text-align: left; }
+  .training-grid, .contact-grid { grid-template-columns: 1fr; }
+  .training-intro { align-items: flex-start; flex-direction: column; }
+}
+@media (max-width: 560px) {
+  .site-footer-grid { grid-template-columns: 1fr; gap: 24px; }
+  .legal-document { padding: 22px; }
+  .legal-data-list { grid-template-columns: 1fr; gap: 2px; }
+  .legal-data-list dd { margin-bottom: 10px; }
+  .training-card { min-height: 0; padding: 24px; }
+  .launch-checklist { grid-template-columns: 1fr; }
+  .listening-photo img { height: 310px; }
+  .listening-photo figcaption { flex-direction: column; gap: 3px; }
+}

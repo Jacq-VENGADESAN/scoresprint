@@ -90,8 +90,9 @@ export async function createCheckoutSession(input: {
   email?: string;
   existingCustomerId?: string | null;
   origin: string;
+  consentAcceptedAt: string;
 }) {
-  const { plan, userId, email, existingCustomerId, origin } = input;
+  const { plan, userId, email, existingCustomerId, origin, consentAcceptedAt } = input;
   const params = formBody({
     mode: "payment",
     success_url: `${origin}/billing/success?session_id={CHECKOUT_SESSION_ID}`,
@@ -102,8 +103,12 @@ export async function createCheckoutSession(input: {
     "metadata[user_id]": userId,
     "metadata[plan_code]": plan.code,
     "metadata[access_days]": plan.days,
+    "metadata[terms_accepted_at]": consentAcceptedAt,
+    "metadata[immediate_access_requested]": "true",
     "payment_intent_data[metadata][user_id]": userId,
     "payment_intent_data[metadata][plan_code]": plan.code,
+    "payment_intent_data[metadata][terms_accepted_at]": consentAcceptedAt,
+    "payment_intent_data[metadata][immediate_access_requested]": "true",
     allow_promotion_codes: true,
     billing_address_collection: "auto",
     "invoice_creation[enabled]": true,

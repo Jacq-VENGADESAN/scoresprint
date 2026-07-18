@@ -14,20 +14,21 @@ type NavigationLink = {
   label: string;
   href: string;
   exact?: boolean;
+  activePrefixes?: string[];
 };
 
 const privateLinks: NavigationLink[] = [
   { label: "Tableau de bord", href: "/dashboard", exact: true },
-  { label: "S’entraîner", href: "/practice" },
+  { label: "Reading", href: "/reading", activePrefixes: ["/practice", "/mock-exam", "/diagnostic"] },
   { label: "Listening", href: "/listening" },
   { label: "Mes erreurs", href: "/errors" },
-  { label: "Mini-examen", href: "/mock-exam" },
   { label: "Historique", href: "/history" }
 ];
 
 const publicLinks: NavigationLink[] = [
   { label: "Fonctionnement", href: "/#fonctionnement" },
-  { label: "Tarifs", href: "/pricing" }
+  { label: "Tarifs", href: "/pricing" },
+  { label: "FAQ", href: "/faq" }
 ];
 
 function MenuIcon({ open }: { open: boolean }) {
@@ -60,6 +61,7 @@ function LogoutIcon() {
 
 function isCurrent(pathname: string, link: NavigationLink) {
   if (link.href.startsWith("/#")) return false;
+  if (link.activePrefixes?.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))) return true;
   return link.exact ? pathname === link.href : pathname === link.href || pathname.startsWith(`${link.href}/`);
 }
 
@@ -67,7 +69,7 @@ export function SiteNavigation({ authenticated, admin, displayName }: Navigation
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const links = authenticated ? privateLinks : publicLinks;
-  const initial = useMemo(() => displayName.trim().charAt(0).toUpperCase() || "S", [displayName]);
+  const initial = useMemo(() => displayName.trim().charAt(0).toUpperCase() || "A", [displayName]);
 
   useEffect(() => setOpen(false), [pathname]);
   useEffect(() => {
@@ -126,7 +128,6 @@ export function SiteNavigation({ authenticated, admin, displayName }: Navigation
           {links.map((link) => (
             <Link className={`nav-link ${isCurrent(pathname, link) ? "active" : ""}`} href={link.href} key={link.href} onClick={closeMenu}>{link.label}</Link>
           ))}
-          {authenticated ? <Link className={`nav-link ${pathname === "/diagnostic" ? "active" : ""}`} href="/diagnostic" onClick={closeMenu}>Diagnostic</Link> : null}
           {authenticated && admin ? <Link className={`nav-link ${pathname.startsWith("/admin") ? "active" : ""}`} href="/admin/questions" onClick={closeMenu}>Administration</Link> : null}
         </div>
         <div className="mobile-nav-actions">

@@ -4,6 +4,7 @@ import {
   REFRESH_TOKEN_COOKIE,
   baseAuthCookieOptions
 } from "@/lib/auth-cookies";
+import { consumeRateLimit } from "@/lib/rate-limit";
 import { requireSupabaseConfig } from "@/lib/supabase-config";
 
 function authRedirect(request: NextRequest, message: string, next?: string) {
@@ -22,6 +23,11 @@ export async function POST(request: NextRequest) {
 
   if (!email || password.length < 6) {
     return authRedirect(request, "Renseigne un e-mail et un mot de passe valide.", next);
+  }
+
+  const rate = await consumeRateLimit(request, { scope: "auth-login", subject: email, limit: 10, windowSeconds: 900 });
+  if (!rate.allowed) {
+    return authRedirect(request, `Trop de tentatives. Réessaie dans environ ${Math.ceil(rate.retry_after_seconds / 60)} minute(s).`, next);
   }
 
   const config = requireSupabaseConfig();

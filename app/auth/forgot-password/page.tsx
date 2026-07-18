@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BRAND_NAME } from "@/lib/brand";
 
 type ForgotPasswordPageProps = {
   searchParams: Promise<{ sent?: string; error?: string }>;
@@ -13,7 +14,7 @@ export default async function ForgotPasswordPage({ searchParams }: ForgotPasswor
         <div className="eyebrow">Récupération du compte</div>
         <h1>Réinitialise ton mot de passe.</h1>
         <p className="muted-copy">
-          Entre l’adresse utilisée sur ScoreSprint. Le message envoyé contiendra un lien temporaire pour choisir un nouveau mot de passe.
+          Entre l’adresse utilisée sur {BRAND_NAME}. Le message envoyé contiendra un lien temporaire pour choisir un nouveau mot de passe.
         </p>
 
         {params.error ? <div className="alert alert-error">{params.error}</div> : null}

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { BRAND_NAME } from "@/lib/brand";
 import { getCurrentUser, supabaseRest } from "@/lib/supabase-server";
 
 async function safeRead(path: string) {
@@ -57,6 +58,7 @@ export async function GET() {
 
   const exportedAt = new Date();
   const document = {
+    product: BRAND_NAME,
     exportVersion: 2,
     exportedAt: exportedAt.toISOString(),
     account: {
@@ -90,7 +92,7 @@ export async function GET() {
   return new NextResponse(JSON.stringify(document, null, 2), {
     headers: {
       "Content-Type": "application/json; charset=utf-8",
-      "Content-Disposition": `attachment; filename="scoresprint-export-${date}.json"`,
+      "Content-Disposition": `attachment; filename="aptileo-export-${date}.json"`,
       "Cache-Control": "no-store"
     }
   });
