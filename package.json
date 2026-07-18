@@ -1,6 +1,6 @@
 {
-  "name": "scoresprint",
-  "version": "0.1.0",
+  "name": "aptileo",
+  "version": "0.2.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -8,7 +8,8 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "validate:questions": "node scripts/validate-question-seed.mjs",
-    "validate:listening": "node scripts/validate-listening-bank.mjs"
+    "validate:listening": "node scripts/validate-listening-bank.mjs",
+    "validate:launch": "node scripts/validate-launch-readiness.mjs"
   },
   "dependencies": {
     "next": "16.2.10",
