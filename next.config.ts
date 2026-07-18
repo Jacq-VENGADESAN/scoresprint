@@ -8,7 +8,7 @@ const contentSecurityPolicy = [
   "form-action 'self' https://checkout.stripe.com",
   "script-src 'self' 'unsafe-inline'",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https://images.unsplash.com",
+  "img-src 'self' data: blob: https://images.pexels.com",
   "font-src 'self' data:",
   "connect-src 'self' https://*.supabase.co https://api.stripe.com",
   "frame-src https://js.stripe.com https://hooks.stripe.com",
