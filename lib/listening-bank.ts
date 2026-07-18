@@ -17,6 +17,7 @@ export type PublicListeningQuestion = {
   difficulty: number;
   targetTimeMs: number;
   photo?: ListeningPhoto;
+  scene?: ListeningPhoto;
   voiceProfile: number;
   promptAudio: string;
   options: Array<{ id: ListeningOptionId; text: string }>;
@@ -52,6 +53,7 @@ const p1 = (
   difficulty,
   targetTimeMs: 30_000,
   photo,
+  scene: photo,
   voiceProfile,
   promptAudio: "Look at the picture and listen to the four statements.",
   options: options.map((text, index) => ({ id: (["A", "B", "C", "D"] as ListeningOptionId[])[index], text })),
