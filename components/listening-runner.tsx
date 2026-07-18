@@ -282,7 +282,7 @@ export function ListeningRunner({ questions, mode }: { questions: PublicListenin
           {summary.part1.total > 0 ? <div><span>Partie 1 · Photographies</span><strong>{summary.part1.correct}/{summary.part1.total} · {summary.part1.accuracy}%</strong></div> : null}
           {summary.part2.total > 0 ? <div><span>Partie 2 · Questions-réponses</span><strong>{summary.part2.correct}/{summary.part2.total} · {summary.part2.accuracy}%</strong></div> : null}
         </div>
-        <div className="notice">Cette estimation n’est pas un score officiel. Elle sert à suivre ta progression sur les exercices originaux de ScoreSprint.</div>
+        <div className="notice">Cette estimation n’est pas un score officiel. Elle sert à suivre ta progression sur les exercices originaux d’Aptileo.</div>
         <div className="session-end-actions">
           <Link href="/dashboard" className="btn btn-primary">Voir mon tableau de bord</Link>
           <Link href={`/listening?mode=${mode}`} className="btn btn-secondary">Nouvelle séance</Link>
