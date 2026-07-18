@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { legalCommerceIsConfigured } from "@/lib/legal";
+import { consumeRateLimit } from "@/lib/rate-limit";
 import { createCheckoutSession, getPaidPlan } from "@/lib/stripe";
 import { getCurrentUser, supabaseRest } from "@/lib/supabase-server";
 
@@ -20,6 +21,9 @@ export async function POST(request: Request) {
   if (liveMode && !legalCommerceIsConfigured()) {
     return NextResponse.redirect(new URL("/pricing?payment=legal", request.url), 303);
   }
+
+  const rate = await consumeRateLimit(request, { scope: "billing-checkout", subject: user.id, limit: 8, windowSeconds: 900 });
+  if (!rate.allowed) return NextResponse.redirect(new URL("/pricing?payment=error", request.url), 303);
 
   try {
     const rows = await supabaseRest<CustomerRow[]>(
