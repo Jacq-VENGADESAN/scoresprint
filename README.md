@@ -1,33 +1,26 @@
-# ScoreSprint
+# Aptileo
 
-ScoreSprint est une plateforme indépendante de préparation adaptative à l’anglais professionnel. L’application analyse les erreurs, estime une fourchette de niveau et construit une séance priorisée.
+Aptileo est une plateforme indépendante de préparation adaptative à l’anglais professionnel. Elle analyse les réponses, programme les erreurs à revoir et construit des séances ciblées en Reading et Listening.
 
-## Fonctionnalités présentes
+> Le dépôt conserve provisoirement son ancien nom technique `scoresprint`. La marque visible du produit est Aptileo.
 
-- création de compte et connexion Supabase ;
+## Fonctionnalités
+
+- compte Supabase avec confirmation, récupération, export et suppression ;
 - diagnostic original de 20 questions ;
-- maîtrise calibrée et score évolutif ;
-- séance quotidienne adaptative et carnet d’erreurs ;
-- mini-examen original de 30 questions chronométré ;
-- historique détaillé et statistiques ;
-- environ 300 questions originales au total ;
-- lot administrable de 200 questions : 80 en partie 5, 50 en partie 6 et 70 en partie 7 ;
-- installation en un clic de la banque depuis l’espace administrateur ;
-- banque de questions supplémentaire gérée dans Supabase ;
-- espace administrateur pour créer, relire, publier et archiver des questions ;
-- import CSV transactionnel jusqu’à 500 questions ;
-- aperçu, filtres, duplication et détection des codes en double ;
-- statistiques de réussite et signalements par question ;
-- offre gratuite avec quotas contrôlés côté serveur ;
-- accès Premium de 30 ou 90 jours ;
-- Stripe Checkout hébergé pour les paiements uniques ;
-- activation automatique et idempotente par webhook ;
-- prolongation d’un accès Premium déjà actif ;
-- portail Stripe pour les reçus et l’historique de paiement ;
-- schéma PostgreSQL/Supabase avec RLS ;
-- CI GitHub Actions et Dockerfile.
+- Reading : parties 5, 6 et 7, séance adaptative, carnet d’erreurs et mini-examen chronométré ;
+- Listening : parties 1 et 2, photographies réelles sous licence Pexels, lecture vocale, transcription après correction et progression distincte ;
+- environ 300 questions Reading originales et 30 exercices Listening originaux ;
+- sauvegarde et reprise des séances ;
+- historique, statistiques et estimation interne ;
+- espace administrateur, import CSV, publication et signalements ;
+- offre gratuite avec quotas côté serveur ;
+- paiements uniques Stripe de 30 ou 90 jours, sans renouvellement automatique ;
+- pages juridiques, footer, sitemap, robots, Open Graph et manifest ;
+- headers de sécurité et limitation des routes sensibles ;
+- tableau de pré-lancement dans `/admin/launch`.
 
-ScoreSprint n’utilise actuellement aucune API d’intelligence artificielle. Les questions, corrections et explications sont contrôlées et enregistrées à l’avance.
+Aucune question officielle TOEIC® n’est copiée. Les exercices sont originaux et utilisent seulement la structure générale de l’épreuve.
 
 ## Démarrage local
 
@@ -41,153 +34,143 @@ Ouvrir `http://localhost:3000`.
 
 ## Variables d’environnement
 
+### Application, Supabase et administration
+
 ```env
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 NEXT_PUBLIC_SUPABASE_URL=https://votre-projet.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
 SUPABASE_SERVICE_ROLE_KEY=sb_secret_...
+RATE_LIMIT_SALT=une-valeur-longue-et-aleatoire
+ADMIN_EMAILS=admin@example.com
+```
+
+### Stripe
+
+```env
 STRIPE_SECRET_KEY=sk_test_...
 STRIPE_WEBHOOK_SECRET=whsec_...
 STRIPE_PRICE_SPRINT_30=price_...
 STRIPE_PRICE_SPRINT_90=price_...
-ADMIN_EMAILS=admin@example.com
 ```
 
-`SUPABASE_SERVICE_ROLE_KEY`, `STRIPE_SECRET_KEY` et `STRIPE_WEBHOOK_SECRET` sont strictement réservées au serveur et ne doivent jamais être préfixées par `NEXT_PUBLIC_` ni commitées dans GitHub.
+### Informations légales
 
-`ADMIN_EMAILS` contient une ou plusieurs adresses séparées par des virgules. Seuls les comptes Supabase connectés avec ces adresses voient l’onglet Admin et peuvent appeler les routes de gestion du contenu.
-
-## Initialiser la base Supabase
-
-Dans **Supabase → SQL Editor**, exécuter dans cet ordre :
-
-1. `20260713150000_initial_schema.sql` ;
-2. `20260713173000_auth_and_goal_persistence.sql` ;
-3. `20260713200000_diagnostic_persistence.sql` ;
-4. `20260713213000_adaptive_practice.sql` ;
-5. `20260713223000_progress_analytics.sql` ;
-6. `20260713233000_calibrated_mastery_mini_exams.sql` ;
-7. `20260714113000_free_tier_usage_limits.sql` ;
-8. `20260714173000_stripe_checkout_payments.sql` ;
-9. `20260714210000_content_admin_platform.sql` ;
-10. `20260714230000_bulk_import_quality_tools.sql`.
-
-La huitième migration complète `subscriptions` et crée `activate_stripe_purchase`, une fonction transactionnelle qui empêche la double activation d’un même paiement et prolonge correctement un accès existant.
-
-La neuvième migration transforme les tables `questions` et `question_options` en catalogue administrable, protège les corrections de tout accès direct, ajoute les champs de contexte et de feedback, puis crée la fonction transactionnelle `save_managed_question`.
-
-La dixième migration ajoute `question_reports` et la fonction transactionnelle `import_managed_questions`. Un import est intégralement annulé si une ligne est invalide ou si un code existe déjà.
-
-Aucune migration supplémentaire n’est requise pour le lot des 200 questions. Il réutilise la fonction transactionnelle de la dixième migration.
-
-## Administration du contenu
-
-Après avoir configuré `ADMIN_EMAILS`, ouvrir :
-
-```text
-/admin/questions
+```env
+LEGAL_BUSINESS_NAME=Aptileo
+LEGAL_PUBLISHER_NAME=
+LEGAL_STATUS=
+LEGAL_ADDRESS=
+LEGAL_REGISTRATION=
+LEGAL_CONTACT_EMAIL=contact@aptileo.fr
+LEGAL_SUPPORT_EMAIL=support@aptileo.fr
+LEGAL_MEDIATOR_NAME=
+LEGAL_MEDIATOR_URL=
+LEGAL_HOST_NAME=Vercel Inc.
+LEGAL_HOST_ADDRESS=440 N Barranca Ave #4133, Covina, CA 91723, États-Unis
 ```
 
-Une question peut rester en brouillon, passer en relecture, être publiée ou archivée. Dès qu’elle est publiée, elle rejoint automatiquement la sélection des séances adaptatives sans nouveau déploiement Vercel.
+Les secrets `SUPABASE_SERVICE_ROLE_KEY`, `RATE_LIMIT_SALT`, `STRIPE_SECRET_KEY` et `STRIPE_WEBHOOK_SECRET` restent exclusivement côté serveur. Ne jamais les préfixer par `NEXT_PUBLIC_`, les coller dans une conversation ou les committer.
 
-### Installer la banque originale
+Stripe Live est automatiquement bloqué tant que les informations légales obligatoires ne sont pas complètes.
 
-Ouvrir :
+## Migrations Supabase
 
-```text
-/admin/questions/seed
-```
+Exécuter les migrations dans cet ordre :
 
-Le bouton d’installation ajoute les questions manquantes par lots transactionnels. Les codes déjà présents sont ignorés, ce qui rend l’opération relançable sans créer de doublons. Les 200 questions sont publiées immédiatement dans Supabase :
+1. `20260713150000_initial_schema.sql`
+2. `20260713173000_auth_and_goal_persistence.sql`
+3. `20260713200000_diagnostic_persistence.sql`
+4. `20260713213000_adaptive_practice.sql`
+5. `20260713223000_progress_analytics.sql`
+6. `20260713233000_calibrated_mastery_mini_exams.sql`
+7. `20260714113000_free_tier_usage_limits.sql`
+8. `20260714173000_stripe_checkout_payments.sql`
+9. `20260714210000_content_admin_platform.sql`
+10. `20260714230000_bulk_import_quality_tools.sql`
+11. `20260715193000_account_and_session_resume.sql`
+12. `20260716110000_listening_parts_1_2.sql`
+13. `20260718143000_production_rate_limits.sql`
 
-- 80 questions de partie 5 ;
-- 50 questions de partie 6 réparties dans 10 textes ;
-- 70 questions de partie 7 réparties dans 14 documents.
+La dernière migration crée un compteur PostgreSQL utilisé pour limiter la connexion, l’inscription, la récupération de mot de passe et la création de Checkout. Seule la clé `service_role` peut appeler la fonction.
 
-### Import CSV facultatif
+## Structure utilisateur
 
-L’import massif personnalisé reste disponible dans :
+- `/dashboard` : progression et priorité du jour ;
+- `/reading` : hub Reading vers séance, erreurs, diagnostic et mini-examen ;
+- `/listening` : hub et séances Listening parties 1 et 2 ;
+- `/history` : historique détaillé ;
+- `/account` : profil, accès, données et suppression.
 
-```text
-/admin/questions/import
-```
+## Administration
 
-Télécharger le modèle CSV depuis cette page. Les colonnes obligatoires comprennent le code, la partie, la compétence, les quatre réponses, la lettre correcte, l’explication et le statut. Les contenus complexes peuvent être entourés de guillemets CSV.
+- `/admin/launch` : état de préparation à la production ;
+- `/admin/questions` : catalogue et édition ;
+- `/admin/questions/seed` : installation du lot de 200 questions ;
+- `/admin/questions/import` : import CSV facultatif ;
+- `/admin/reports` : traitement des signalements.
 
-Les utilisateurs peuvent signaler une question après sa correction. Les administrateurs traitent ces retours dans :
+## Photographies du Listening
 
-```text
-/admin/reports
-```
+Les dix exercices de Partie 1 utilisent de vraies photographies Pexels. Le crédit et un lien vers la page source sont affichés sous chaque photographie. Les phrases audio et les distracteurs sont écrits spécialement pour Aptileo.
 
-Chaque modification remplace atomiquement les quatre options et ajoute une entrée dans `question_admin_events`. Les bonnes réponses et explications sont chargées uniquement sur le serveur avec la clé `service_role`.
+Ne pas importer d’images trouvées au hasard sur Internet et ne pas recopier de questions ETS ou provenant d’un autre site de préparation.
 
-## Configuration Stripe
+## Stripe
 
-Dans Stripe, créer deux produits avec un prix unique en euros :
+Créer deux prix uniques :
 
 - Sprint 30 : 24,90 € ;
 - Sprint 90 : 49,90 €.
 
-Copier leurs identifiants `price_...` dans les variables Vercel correspondantes.
-
-Créer ensuite un endpoint webhook pointant vers :
+Webhook :
 
 ```text
 https://votre-domaine/api/stripe/webhook
 ```
 
-Événements à écouter :
+Événements :
 
-- `checkout.session.completed` ;
-- `checkout.session.async_payment_succeeded`.
+- `checkout.session.completed`
+- `checkout.session.async_payment_succeeded`
 
-Copier le secret de signature `whsec_...` dans `STRIPE_WEBHOOK_SECRET`. La page de succès ne donne jamais elle-même Premium : seul le webhook signé active l’accès.
-
-Pour le bouton « Gérer mes paiements », activer et configurer le portail client dans Stripe. Checkout crée un Customer et une facture pour chaque paiement unique.
-
-## Offre gratuite et Premium
-
-Compte gratuit :
-
-- 1 séance par jour ;
-- 1 mini-examen par mois ;
-- historique des 7 derniers jours.
-
-Premium :
-
-- séances illimitées ;
-- mini-examens illimités ;
-- historique complet ;
-- accès de 30 ou 90 jours sans renouvellement automatique.
-
-Un nouvel achat effectué pendant une période Premium ajoute sa durée après la date d’expiration déjà prévue.
-
-## Sécurité du paiement et du contenu
-
-- les coordonnées bancaires sont saisies sur Stripe Checkout ;
-- aucune donnée de carte n’est stockée dans ScoreSprint ;
-- le Checkout est créé pour l’utilisateur authentifié ;
-- le webhook est vérifié par signature HMAC et horodatage ;
-- la clé Supabase `service_role` reste uniquement côté serveur ;
-- les achats sont idempotents grâce à l’identifiant unique de la Checkout Session ;
-- les tables contenant les bonnes réponses n’accordent aucun accès direct aux utilisateurs ;
-- chaque route d’administration vérifie l’adresse du compte authentifié ;
-- les imports sont limités à 500 questions et validés avant écriture ;
-- l’installation du lot ignore les codes déjà présents et découpe les écritures en lots de 50.
+Le Checkout exige l’acceptation des CGU/CGV et la demande d’activation immédiate. La date de consentement est ajoutée aux métadonnées Stripe. Seul le webhook signé active Premium.
 
 ## Vérifications
 
 ```bash
 npm run validate:questions
+npm run validate:listening
+npm run validate:launch
 npm run typecheck
 npm run build
 ```
 
-Le contrôle de contenu vérifie le nombre de questions, la répartition 80/50/70, les codes uniques, les quatre options, l’unique bonne réponse, les champs obligatoires et l’absence d’accents mal encodés.
+La CI contrôle notamment :
 
-Avant la mise en production réelle, tester tout le parcours en mode test Stripe, puis compléter les CGV, la politique de confidentialité, les obligations fiscales et les informations légales.
+- la banque Reading ;
+- les 10 photographies et 20 questions-réponses Listening ;
+- la présence de Reading et Listening dans la navigation ;
+- les pages juridiques et SEO ;
+- le consentement avant paiement ;
+- les headers de sécurité ;
+- l’absence de l’ancien nom dans les principaux écrans publics.
 
-## Avertissement de marque
+## Checklist avant Stripe Live
 
-TOEIC® est une marque déposée d’ETS. ScoreSprint est indépendant et n’est ni affilié, ni approuvé, ni sponsorisé par ETS. Aucun contenu officiel ne doit être copié ou redistribué.
+1. Vérifier le nom Aptileo sur INPI et EUIPO ;
+2. acheter et connecter le domaine définitif ;
+3. remplacer `NEXT_PUBLIC_APP_URL` et mettre à jour Supabase/Stripe ;
+4. renseigner toutes les variables `LEGAL_*` et faire relire les textes ;
+5. désigner un médiateur de la consommation ;
+6. configurer un SMTP Supabase personnalisé avec SPF, DKIM et DMARC ;
+7. exécuter les treize migrations ;
+8. tester inscription, récupération, diagnostic, Reading, Listening, quotas et reprise ;
+9. tester un paiement Stripe en mode Test, puis un achat Live contrôlé et son remboursement ;
+10. mettre en place les alertes Vercel, Supabase et le suivi des erreurs ;
+11. faire relire la banque pédagogique ;
+12. tester Chrome, Edge, Firefox, Safari, Android et iPhone.
+
+## Indépendance
+
+TOEIC® est une marque déposée d’ETS. Aptileo est indépendant et n’est ni affilié, ni approuvé, ni sponsorisé par ETS. Les scores affichés sont des estimations internes et ne constituent pas des résultats officiels.
