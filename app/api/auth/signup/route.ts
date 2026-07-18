@@ -4,6 +4,7 @@ import {
   REFRESH_TOKEN_COOKIE,
   baseAuthCookieOptions
 } from "@/lib/auth-cookies";
+import { consumeRateLimit } from "@/lib/rate-limit";
 import { requireSupabaseConfig } from "@/lib/supabase-config";
 
 function redirectToAuth(request: NextRequest, error: string) {
@@ -23,6 +24,11 @@ export async function POST(request: NextRequest) {
       request,
       "Indique ton prénom, un e-mail valide et un mot de passe d’au moins 8 caractères."
     );
+  }
+
+  const rate = await consumeRateLimit(request, { scope: "auth-signup", subject: email, limit: 5, windowSeconds: 3600 });
+  if (!rate.allowed) {
+    return redirectToAuth(request, "Trop de créations de compte ont été demandées. Réessaie plus tard.");
   }
 
   const config = requireSupabaseConfig();
