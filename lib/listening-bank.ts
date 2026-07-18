@@ -1,17 +1,13 @@
 export type ListeningOptionId = "A" | "B" | "C" | "D";
 export type ListeningPart = 1 | 2;
 export type ListeningMode = "part1" | "part2" | "mixed";
-export type ListeningSceneId =
-  | "meeting-chairs"
-  | "delivery-van"
-  | "chef-counter"
-  | "watering-plants"
-  | "machine-technicians"
-  | "boarding-gate"
-  | "bus-stop"
-  | "folders-shelf"
-  | "bicycle-building"
-  | "conference-banner";
+
+export type ListeningPhoto = {
+  src: string;
+  alt: string;
+  sourceUrl: string;
+  sourceLabel: string;
+};
 
 export type PublicListeningQuestion = {
   id: string;
@@ -20,7 +16,7 @@ export type PublicListeningQuestion = {
   skillLabel: string;
   difficulty: number;
   targetTimeMs: number;
-  scene?: ListeningSceneId;
+  photo?: ListeningPhoto;
   voiceProfile: number;
   promptAudio: string;
   options: Array<{ id: ListeningOptionId; text: string }>;
@@ -32,9 +28,16 @@ type ListeningQuestion = PublicListeningQuestion & {
   trap: string;
 };
 
+const pexels = (id: number, slug: string, alt: string): ListeningPhoto => ({
+  src: `https://images.pexels.com/photos/${id}/pexels-photo-${id}.jpeg?auto=compress&cs=tinysrgb&w=1400`,
+  alt,
+  sourceUrl: `https://www.pexels.com/photo/${slug}-${id}/`,
+  sourceLabel: "Photo sous licence Pexels"
+});
+
 const p1 = (
   id: string,
-  scene: ListeningSceneId,
+  photo: ListeningPhoto,
   difficulty: number,
   options: [string, string, string, string],
   correctOptionId: ListeningOptionId,
@@ -48,7 +51,7 @@ const p1 = (
   skillLabel: "Photographies",
   difficulty,
   targetTimeMs: 30_000,
-  scene,
+  photo,
   voiceProfile,
   promptAudio: "Look at the picture and listen to the four statements.",
   options: options.map((text, index) => ({ id: (["A", "B", "C", "D"] as ListeningOptionId[])[index], text })),
@@ -82,36 +85,36 @@ const p2 = (
 });
 
 const questions: ListeningQuestion[] = [
-  p1("listen-p1-001", "meeting-chairs", 1,
-    ["A woman is arranging chairs around a table.", "A woman is writing on a whiteboard.", "Several people are leaving a meeting room.", "The chairs are stacked against a wall."],
-    "A", "La personne déplace les chaises autour de la table pour préparer la salle.", "Entendre le mot chairs sans vérifier l’action exacte.", 0),
-  p1("listen-p1-002", "delivery-van", 2,
-    ["Some boxes are being loaded onto a truck.", "A delivery worker is carrying a package away from a van.", "The vehicle is parked inside a warehouse.", "A customer is signing a receipt at a counter."],
-    "B", "Le livreur transporte un colis depuis la camionnette vers le bâtiment.", "Confondre loaded onto et carried away from, deux formulations avec les mêmes objets.", 1),
-  p1("listen-p1-003", "chef-counter", 2,
-    ["A cook is placing dishes on a counter.", "Customers are ordering meals from a menu.", "The kitchen equipment is being repaired.", "Several plates are being washed in a sink."],
-    "A", "Le cuisinier dépose des assiettes préparées sur le plan de travail.", "Se concentrer sur plates et choisir une action fréquente mais absente.", 2),
-  p1("listen-p1-004", "watering-plants", 1,
-    ["A woman is watering plants in a lobby.", "A woman is sweeping the entrance.", "Some flowers are being delivered.", "The reception desk is being moved."],
-    "A", "La femme utilise un arrosoir près de plantes dans un hall.", "Choisir une action d’entretien plausible sans regarder l’objet tenu.", 3),
-  p1("listen-p1-005", "machine-technicians", 3,
-    ["Two technicians are examining a machine.", "Two employees are packing finished products.", "The machinery has been covered with a sheet.", "One of the workers is operating a forklift."],
-    "A", "Les deux personnes observent et contrôlent une machine industrielle.", "Associer factory à packing ou forklift alors que ces actions ne sont pas visibles.", 0),
-  p1("listen-p1-006", "boarding-gate", 2,
-    ["A passenger is scanning a boarding pass.", "A traveler is collecting luggage from a carousel.", "The airport seats are all occupied.", "A flight attendant is serving a beverage."],
-    "A", "Le passager présente son téléphone au lecteur de la porte d’embarquement.", "Choisir une scène d’aéroport générique plutôt que l’action précise.", 1),
-  p1("listen-p1-007", "bus-stop", 2,
-    ["People are waiting beside a bus stop sign.", "Passengers are boarding a train.", "A road is being closed for construction.", "Several bicycles are lined up near a station."],
-    "A", "Plusieurs personnes attendent près du panneau d’arrêt de bus.", "Se laisser tromper par station et choisir un autre moyen de transport.", 2),
-  p1("listen-p1-008", "folders-shelf", 1,
-    ["A clerk is placing folders on a shelf.", "Some documents are scattered across the floor.", "A cabinet door is being painted.", "The shelves have been emptied."],
-    "A", "L’employée range des dossiers sur une étagère.", "Confondre shelf, cabinet et folders sans vérifier le verbe.", 3),
-  p1("listen-p1-009", "bicycle-building", 2,
-    ["A cyclist is locking a bicycle near a building.", "A bicycle is being carried up some stairs.", "A man is repairing a motorcycle.", "Several pedestrians are crossing the street."],
-    "A", "Le cycliste attache son vélo à un support près de l’entrée.", "Entendre bicycle et choisir n’importe quelle action impliquant un deux-roues.", 0),
-  p1("listen-p1-010", "conference-banner", 3,
-    ["Workers are hanging a banner in a conference room.", "A presentation is being projected onto a screen.", "The tables are being removed from the room.", "Guests are taking photographs of a speaker."],
-    "A", "Deux personnes installent une bannière au-dessus de l’espace de conférence.", "Confondre préparation d’événement et événement déjà commencé.", 1),
+  p1("listen-p1-001", pexels(17664083, "tables-and-chairs-in-office-room", "Une salle de réunion lumineuse avec plusieurs tables et chaises."), 1,
+    ["Several chairs have been arranged around conference tables.", "Some people are writing on a whiteboard.", "The furniture is being carried out of the room.", "A projector has been placed on every chair."],
+    "A", "Les chaises sont disposées autour des tables dans une salle de réunion vide.", "Choisir une action plausible dans une salle de réunion alors qu’aucune personne n’est visible.", 0),
+  p1("listen-p1-002", pexels(6169177, "delivery-man-getting-packages-from-a-van", "Un livreur sort des colis d’une camionnette blanche."), 2,
+    ["A delivery worker is taking packages from a van.", "A customer is signing a form at a counter.", "The boxes have been stacked on a store shelf.", "The vehicle is being washed in a garage."],
+    "A", "Le livreur retire des colis de la camionnette.", "Se concentrer sur boxes ou vehicle sans vérifier l’action exacte.", 1),
+  p1("listen-p1-003", pexels(11157601, "chefs-preparing-food-in-a-kitchen", "Plusieurs chefs préparent des plats sur le plan de travail d’une cuisine professionnelle."), 2,
+    ["Several chefs are preparing food at a kitchen counter.", "Customers are reading menus near the entrance.", "The kitchen appliances are being delivered.", "All the dishes have been put away."],
+    "A", "Plusieurs cuisiniers travaillent sur des préparations posées sur le comptoir.", "Entendre kitchen ou dishes et choisir une activité qui n’est pas visible.", 2),
+  p1("listen-p1-004", pexels(9907669, "woman-watering-potted-plants", "Une femme arrose des plantes en pot dans un espace de travail."), 1,
+    ["A woman is watering potted plants in a workspace.", "A woman is sweeping the floor near a window.", "Some plants are being loaded into a vehicle.", "A desk is being moved across the room."],
+    "A", "La femme utilise un arrosoir pour entretenir les plantes en pot.", "Choisir une autre tâche d’entretien sans regarder l’objet tenu.", 3),
+  p1("listen-p1-005", pexels(3846251, "technicians-in-factory-working-on-machine", "Des techniciens travaillent sur une machine dans un atelier industriel."), 3,
+    ["Technicians are working on a piece of machinery.", "Workers are packing finished products into cartons.", "The equipment has been covered with a protective sheet.", "A forklift is transporting the machine."],
+    "A", "Les personnes manipulent et inspectent une machine dans l’atelier.", "Associer automatiquement factory à packing ou forklift.", 0),
+  p1("listen-p1-006", pexels(13404727, "back-view-of-people-queuing-at-an-airport-gate", "Des voyageurs font la queue devant une porte d’embarquement."), 2,
+    ["Passengers are standing in line at an airport gate.", "Travelers are collecting luggage from a carousel.", "Every seat in the terminal is occupied.", "A flight attendant is serving refreshments."],
+    "A", "Les passagers attendent en file devant la porte d’embarquement.", "Choisir une scène d’aéroport générique au lieu de l’action visible.", 1),
+  p1("listen-p1-007", pexels(18427240, "passengers-waiting-at-a-city-bus-stop", "Plusieurs personnes attendent sous un abribus en ville."), 2,
+    ["Several passengers are waiting at a bus stop.", "People are boarding a train on a platform.", "The road has been closed for construction.", "Bicycles are being rented beside a station."],
+    "A", "Les personnes sont rassemblées dans la zone d’attente d’un arrêt de bus.", "Se laisser tromper par station et choisir un autre moyen de transport.", 2),
+  p1("listen-p1-008", pexels(3791185, "pensive-female-worker-choosing-folder-with-documents-in-modern-office", "Une employée choisit un dossier sur une étagère de bureau."), 1,
+    ["A woman is selecting a folder from a shelf.", "Documents are scattered across the floor.", "The shelving unit is being painted.", "All of the cabinets have been emptied."],
+    "A", "L’employée prend ou examine un dossier rangé sur l’étagère.", "Confondre folder, shelf et cabinet sans vérifier le verbe.", 3),
+  p1("listen-p1-009", pexels(5968968, "bicycle-locked-on-a-pole", "Un vélo est attaché à un poteau près d’un bâtiment."), 2,
+    ["A bicycle has been locked to a pole.", "A cyclist is carrying a bicycle up some stairs.", "A mechanic is repairing a motorcycle.", "Pedestrians are crossing a busy intersection."],
+    "A", "Le vélo est immobilisé et attaché au poteau.", "Entendre bicycle et sélectionner n’importe quelle action avec un deux-roues.", 0),
+  p1("listen-p1-010", pexels(15141493, "team-of-workers-in-meeting", "Un groupe de salariés assiste à une présentation dans une salle."), 3,
+    ["A group of employees is attending a presentation.", "Workers are removing tables from the room.", "A banner is being folded on the floor.", "The audience is taking photographs outdoors."],
+    "A", "Les participants sont réunis dans une salle et suivent une présentation.", "Confondre une réunion en cours avec la préparation ou le rangement de la salle.", 1),
 
   p2("listen-p2-001", 1, "Where should I leave the signed contract?",
     ["On Ms. Patel's desk.", "It was signed yesterday.", "The contract is for one year."],
