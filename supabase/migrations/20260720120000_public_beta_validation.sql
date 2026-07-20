@@ -24,7 +24,7 @@ create index if not exists product_events_anonymous_idx on public.product_events
 
 create table if not exists public.premium_waitlist (
   id uuid primary key default gen_random_uuid(),
-  email text not null check (char_length(email) between 5 and 320),
+  email text not null unique check (char_length(email) between 5 and 320 and email = lower(email)),
   user_id uuid references auth.users(id) on delete set null,
   plan_interest text not null default 'undecided' check (plan_interest in ('sprint_30', 'sprint_90', 'undecided')),
   goal_score integer check (goal_score is null or goal_score between 10 and 990),
@@ -35,7 +35,6 @@ create table if not exists public.premium_waitlist (
   updated_at timestamptz not null default now()
 );
 
-create unique index if not exists premium_waitlist_email_unique on public.premium_waitlist (lower(email));
 create index if not exists premium_waitlist_created_at_idx on public.premium_waitlist (created_at desc);
 
 create table if not exists public.beta_feedback (
@@ -65,6 +64,28 @@ revoke all on public.beta_feedback from anon, authenticated;
 grant all on public.product_events to service_role;
 grant all on public.premium_waitlist to service_role;
 grant all on public.beta_feedback to service_role;
+
+create or replace function public.delete_beta_data_for_user(target_user_id uuid, target_email text)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if target_user_id is null then
+    raise exception 'USER_ID_REQUIRED';
+  end if;
+
+  delete from public.product_events where user_id = target_user_id;
+  delete from public.beta_feedback where user_id = target_user_id;
+  delete from public.premium_waitlist
+  where user_id = target_user_id
+     or (target_email is not null and email = lower(target_email));
+end;
+$$;
+
+revoke all on function public.delete_beta_data_for_user(uuid, text) from public, anon, authenticated;
+grant execute on function public.delete_beta_data_for_user(uuid, text) to service_role;
 
 comment on table public.product_events is 'Mesure d audience interne de la bêta, sans publicité ni adresse IP brute.';
 comment on table public.premium_waitlist is 'Demandes volontaires pour être informé de l ouverture Premium.';
