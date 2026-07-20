@@ -92,9 +92,8 @@ export function PublicDemoRunner({ questions }: { questions: DemoQuestion[] }) {
     if (!revealed) return;
     const nextIndex = index + 1;
     if (nextIndex >= questions.length) {
-      const correct = answers.filter((answer) => answer.correct).length + (selected === question.correctOptionId ? 0 : 0);
       trackProductEvent("demo_completed", {
-        correct_answers: correct,
+        correct_answers: answers.filter((answer) => answer.correct).length,
         total_questions: questions.length,
         duration_seconds: Math.round((Date.now() - startedAt.current) / 1000)
       }, "/demo");
