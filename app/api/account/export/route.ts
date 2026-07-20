@@ -1,14 +1,16 @@
 import { NextResponse } from "next/server";
 import { BRAND_NAME } from "@/lib/brand";
+import { supabaseAdminRest } from "@/lib/supabase-admin";
 import { getCurrentUser, supabaseRest } from "@/lib/supabase-server";
 
 async function safeRead(path: string) {
-  try {
-    return await supabaseRest<unknown[]>(path);
-  } catch (error) {
-    console.error(`Unable to export ${path.split("?")[0]}`, error);
-    return [];
-  }
+  try { return await supabaseRest<unknown[]>(path); }
+  catch (error) { console.error(`Unable to export ${path.split("?")[0]}`, error); return []; }
+}
+
+async function safeAdminRead(path: string) {
+  try { return await supabaseAdminRest<unknown[]>(path); }
+  catch (error) { console.error(`Unable to export beta data from ${path.split("?")[0]}`, error); return []; }
 }
 
 export async function GET() {
@@ -17,24 +19,9 @@ export async function GET() {
 
   const userFilter = `user_id=eq.${user.id}`;
   const [
-    profiles,
-    goals,
-    diagnostics,
-    diagnosticAnswers,
-    masteries,
-    sessions,
-    practiceAttempts,
-    errorItems,
-    scoreSnapshots,
-    miniExams,
-    miniExamAnswers,
-    listeningRuns,
-    listeningAttempts,
-    usage,
-    subscriptions,
-    reports,
-    drafts,
-    legacyAttempts
+    profiles, goals, diagnostics, diagnosticAnswers, masteries, sessions, practiceAttempts,
+    errorItems, scoreSnapshots, miniExams, miniExamAnswers, listeningRuns, listeningAttempts,
+    usage, subscriptions, reports, drafts, legacyAttempts, productEvents, waitlistEntries, betaFeedback
   ] = await Promise.all([
     safeRead(`profiles?select=id,display_name,created_at,updated_at&id=eq.${user.id}`),
     safeRead(`user_goals?select=*&${userFilter}`),
@@ -53,38 +40,22 @@ export async function GET() {
     safeRead(`subscriptions?select=plan_code,status,access_starts_at,access_ends_at,created_at&${userFilter}&order=created_at.asc`),
     safeRead(`question_reports?select=question_code,category,details,selected_option,status,created_at,reviewed_at&${userFilter}&order=created_at.asc`),
     safeRead(`session_drafts?select=kind,payload,started_at,expires_at,updated_at&${userFilter}`),
-    safeRead(`attempts?select=*&${userFilter}&order=created_at.asc`)
+    safeRead(`attempts?select=*&${userFilter}&order=created_at.asc`),
+    safeAdminRead(`product_events?select=event_name,path,properties,created_at&${userFilter}&order=created_at.asc`),
+    safeAdminRead(`premium_waitlist?select=email,plan_interest,goal_score,exam_date,source,consent_at,created_at,updated_at&${userFilter}&order=created_at.asc`),
+    safeAdminRead(`beta_feedback?select=rating,category,message,email,path,status,created_at,reviewed_at&${userFilter}&order=created_at.asc`)
   ]);
 
   const exportedAt = new Date();
   const document = {
     product: BRAND_NAME,
-    exportVersion: 2,
+    exportVersion: 3,
     exportedAt: exportedAt.toISOString(),
-    account: {
-      id: user.id,
-      email: user.email ?? null,
-      displayName: user.user_metadata?.display_name ?? null
-    },
+    account: { id: user.id, email: user.email ?? null, displayName: user.user_metadata?.display_name ?? null },
     data: {
-      profiles,
-      goals,
-      diagnostics,
-      diagnosticAnswers,
-      masteries,
-      sessions,
-      practiceAttempts,
-      errorItems,
-      scoreSnapshots,
-      miniExams,
-      miniExamAnswers,
-      listeningRuns,
-      listeningAttempts,
-      usage,
-      subscriptions,
-      reports,
-      drafts,
-      legacyAttempts
+      profiles, goals, diagnostics, diagnosticAnswers, masteries, sessions, practiceAttempts, errorItems,
+      scoreSnapshots, miniExams, miniExamAnswers, listeningRuns, listeningAttempts, usage, subscriptions,
+      reports, drafts, legacyAttempts, productEvents, waitlistEntries, betaFeedback
     }
   };
 
