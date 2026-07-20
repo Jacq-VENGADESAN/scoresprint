@@ -1,10 +1,9 @@
-import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
+import { attachBetaVisitorCookie, getBetaVisitor, recordProductEvent } from "@/lib/beta-server";
 import { consumeRateLimit } from "@/lib/rate-limit";
 import { supabaseAdminRest } from "@/lib/supabase-admin";
 import { getCurrentUser } from "@/lib/supabase-server";
 
-const VISITOR_COOKIE = "aptileo_beta_session";
 const plans = new Set(["sprint_30", "sprint_90", "undecided"]);
 
 function validEmail(value: string) {
@@ -35,62 +34,36 @@ export async function POST(request: NextRequest) {
   const limit = await consumeRateLimit(request, { scope: "premium_waitlist", limit: 8, windowSeconds: 86_400, subject: email });
   if (!limit.allowed) return NextResponse.json({ error: "Trop de tentatives. Réessaie plus tard." }, { status: 429 });
 
-  const existingVisitor = request.cookies.get(VISITOR_COOKIE)?.value;
-  const visitorId = existingVisitor && existingVisitor.length >= 16 ? existingVisitor : randomUUID();
+  const visitor = getBetaVisitor(request);
   const user = await getCurrentUser();
   const now = new Date().toISOString();
 
   try {
-    const existing = await supabaseAdminRest<Array<{ id: string }>>(
-      `premium_waitlist?select=id&email=eq.${encodeURIComponent(email)}&limit=1`
-    );
-    const payload = {
-      email,
-      user_id: user?.id ?? null,
-      plan_interest: planInterest,
-      goal_score: goalScore,
-      exam_date: examDate,
-      source,
-      consent_at: now,
-      updated_at: now
-    };
-    if (existing[0]?.id) {
-      await supabaseAdminRest(`premium_waitlist?id=eq.${existing[0].id}`, {
-        method: "PATCH",
-        headers: { Prefer: "return=minimal" },
-        body: JSON.stringify(payload)
-      });
-    } else {
-      await supabaseAdminRest("premium_waitlist", {
-        method: "POST",
-        headers: { Prefer: "return=minimal" },
-        body: JSON.stringify({ ...payload, created_at: now })
-      });
-    }
-    await supabaseAdminRest("product_events", {
+    await supabaseAdminRest("premium_waitlist?on_conflict=email", {
       method: "POST",
-      headers: { Prefer: "return=minimal" },
+      headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
       body: JSON.stringify({
-        anonymous_id: visitorId,
+        email,
         user_id: user?.id ?? null,
-        event_name: "waitlist_joined",
-        path: "/pricing",
-        properties: { plan_interest: planInterest, source }
+        plan_interest: planInterest,
+        goal_score: goalScore,
+        exam_date: examDate,
+        source,
+        consent_at: now,
+        updated_at: now
       })
+    });
+    await recordProductEvent({
+      visitorId: visitor.id,
+      userId: user?.id,
+      eventName: "waitlist_joined",
+      path: "/pricing",
+      properties: { plan_interest: planInterest, source }
     });
   } catch (error) {
     console.error("Unable to join Premium waitlist", error);
-    return NextResponse.json({ error: "La liste d’attente n’est pas encore disponible. Vérifie que la migration bêta a été exécutée." }, { status: 503 });
+    return attachBetaVisitorCookie(NextResponse.json({ error: "La liste d’attente n’est pas encore disponible. Vérifie que la migration bêta a été exécutée." }, { status: 503 }), visitor);
   }
 
-  const response = NextResponse.json({ ok: true });
-  if (!existingVisitor) {
-    response.cookies.set(VISITOR_COOKIE, visitorId, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/"
-    });
-  }
-  return response;
+  return attachBetaVisitorCookie(NextResponse.json({ ok: true }), visitor);
 }
