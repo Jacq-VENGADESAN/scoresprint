@@ -11,15 +11,11 @@ function accountError(request: Request, message: string) {
 }
 
 async function deleteBetaData(userId: string, email: string) {
-  const paths = [
-    `product_events?user_id=eq.${userId}`,
-    `beta_feedback?user_id=eq.${userId}`,
-    `premium_waitlist?or=(user_id.eq.${userId},email.eq.${encodeURIComponent(email)})`
-  ];
-  for (const path of paths) {
-    try { await supabaseAdminRest(path, { method: "DELETE", headers: { Prefer: "return=minimal" } }); }
-    catch (error) { console.error(`Unable to delete beta data from ${path.split("?")[0]}`, error); }
-  }
+  await supabaseAdminRest("rpc/delete_beta_data_for_user", {
+    method: "POST",
+    headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ target_user_id: userId, target_email: email })
+  });
 }
 
 export async function POST(request: Request) {
