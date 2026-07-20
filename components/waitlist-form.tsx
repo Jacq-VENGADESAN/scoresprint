@@ -20,9 +20,10 @@ export function WaitlistForm({
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const formElement = event.currentTarget;
     setStatus("loading");
     setMessage("");
-    const form = new FormData(event.currentTarget);
+    const form = new FormData(formElement);
     const goalValue = String(form.get("goal_score") ?? "").trim();
     try {
       const response = await fetch("/api/waitlist", {
@@ -39,9 +40,9 @@ export function WaitlistForm({
       });
       const payload = (await response.json()) as { error?: string };
       if (!response.ok) throw new Error(payload.error ?? "Inscription impossible.");
+      formElement.reset();
       setStatus("success");
       setMessage("C’est enregistré. Tu seras informé uniquement des avancées importantes et de l’ouverture Premium.");
-      event.currentTarget.reset();
     } catch (error) {
       setStatus("error");
       setMessage(error instanceof Error ? error.message : "Inscription impossible.");
