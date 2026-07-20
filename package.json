@@ -9,7 +9,8 @@
     "typecheck": "tsc --noEmit",
     "validate:questions": "node scripts/validate-question-seed.mjs",
     "validate:listening": "node scripts/validate-listening-bank.mjs",
-    "validate:launch": "node scripts/validate-launch-readiness.mjs"
+    "validate:launch": "node scripts/validate-launch-readiness.mjs",
+    "validate:beta": "node scripts/validate-beta.mjs"
   },
   "dependencies": {
     "next": "16.2.10",
