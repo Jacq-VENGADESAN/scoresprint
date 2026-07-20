@@ -21,11 +21,14 @@ const privateLinks: NavigationLink[] = [
   { label: "Tableau de bord", href: "/dashboard", exact: true },
   { label: "Reading", href: "/reading", activePrefixes: ["/practice", "/mock-exam", "/diagnostic"] },
   { label: "Listening", href: "/listening" },
+  { label: "Fiches", href: "/lessons" },
   { label: "Mes erreurs", href: "/errors" },
   { label: "Historique", href: "/history" }
 ];
 
 const publicLinks: NavigationLink[] = [
+  { label: "Démo", href: "/demo" },
+  { label: "Fiches", href: "/lessons" },
   { label: "Fonctionnement", href: "/#fonctionnement" },
   { label: "Tarifs", href: "/pricing" },
   { label: "FAQ", href: "/faq" }
@@ -105,8 +108,10 @@ export function SiteNavigation({ authenticated, admin, displayName }: Navigation
             <div className="account-popover">
               <Link href="/account"><UserIcon />Mon compte</Link>
               <Link href="/diagnostic"><TargetIcon />Refaire le diagnostic</Link>
+              <Link href="/feedback"><TargetIcon />Donner mon avis</Link>
               <Link href="/pricing"><CardIcon />Accès et tarifs</Link>
               {admin ? <Link href="/admin/questions"><TargetIcon />Administration</Link> : null}
+              {admin ? <Link href="/admin/beta"><TargetIcon />Bêta et conversion</Link> : null}
               <div className="account-popover-divider" />
               <form action="/api/auth/logout" method="post"><button type="submit"><LogoutIcon />Se déconnecter</button></form>
             </div>
@@ -114,7 +119,7 @@ export function SiteNavigation({ authenticated, admin, displayName }: Navigation
         ) : (
           <>
             <Link className="btn btn-secondary compact-btn" href="/auth">Connexion</Link>
-            <Link className="btn btn-primary compact-btn" href="/onboarding">Diagnostic gratuit</Link>
+            <Link className="btn btn-primary compact-btn" href="/demo">Essayer gratuitement</Link>
           </>
         )}
 
@@ -133,13 +138,14 @@ export function SiteNavigation({ authenticated, admin, displayName }: Navigation
         <div className="mobile-nav-actions">
           {authenticated ? (
             <>
+              <Link className="btn btn-secondary" href="/feedback" onClick={closeMenu}>Donner mon avis</Link>
               <Link className="btn btn-secondary" href="/account" onClick={closeMenu}>Mon compte</Link>
               <form action="/api/auth/logout" method="post"><button className="btn btn-primary" type="submit">Se déconnecter</button></form>
             </>
           ) : (
             <>
               <Link className="btn btn-secondary" href="/auth" onClick={closeMenu}>Connexion</Link>
-              <Link className="btn btn-primary" href="/onboarding" onClick={closeMenu}>Commencer gratuitement</Link>
+              <Link className="btn btn-primary" href="/demo" onClick={closeMenu}>Tester sans compte</Link>
             </>
           )}
         </div>
