@@ -3,12 +3,8 @@ import { BRAND_NAME } from "@/lib/brand";
 import { getCurrentUser, supabaseRest } from "@/lib/supabase-server";
 
 async function safeRead(path: string) {
-  try {
-    return await supabaseRest<unknown[]>(path);
-  } catch (error) {
-    console.error(`Unable to export ${path.split("?")[0]}`, error);
-    return [];
-  }
+  try { return await supabaseRest<unknown[]>(path); }
+  catch (error) { console.error(`Unable to export ${path.split("?")[0]}`, error); return []; }
 }
 
 export async function GET() {
@@ -17,24 +13,9 @@ export async function GET() {
 
   const userFilter = `user_id=eq.${user.id}`;
   const [
-    profiles,
-    goals,
-    diagnostics,
-    diagnosticAnswers,
-    masteries,
-    sessions,
-    practiceAttempts,
-    errorItems,
-    scoreSnapshots,
-    miniExams,
-    miniExamAnswers,
-    listeningRuns,
-    listeningAttempts,
-    usage,
-    subscriptions,
-    reports,
-    drafts,
-    legacyAttempts
+    profiles, goals, diagnostics, diagnosticAnswers, masteries, sessions, practiceAttempts,
+    errorItems, scoreSnapshots, miniExams, miniExamAnswers, listeningRuns, listeningAttempts,
+    usage, subscriptions, reports, drafts, legacyAttempts
   ] = await Promise.all([
     safeRead(`profiles?select=id,display_name,created_at,updated_at&id=eq.${user.id}`),
     safeRead(`user_goals?select=*&${userFilter}`),
@@ -59,32 +40,13 @@ export async function GET() {
   const exportedAt = new Date();
   const document = {
     product: BRAND_NAME,
-    exportVersion: 2,
+    exportVersion: 3,
     exportedAt: exportedAt.toISOString(),
-    account: {
-      id: user.id,
-      email: user.email ?? null,
-      displayName: user.user_metadata?.display_name ?? null
-    },
+    account: { id: user.id, email: user.email ?? null, displayName: user.user_metadata?.display_name ?? null },
     data: {
-      profiles,
-      goals,
-      diagnostics,
-      diagnosticAnswers,
-      masteries,
-      sessions,
-      practiceAttempts,
-      errorItems,
-      scoreSnapshots,
-      miniExams,
-      miniExamAnswers,
-      listeningRuns,
-      listeningAttempts,
-      usage,
-      subscriptions,
-      reports,
-      drafts,
-      legacyAttempts
+      profiles, goals, diagnostics, diagnosticAnswers, masteries, sessions, practiceAttempts, errorItems,
+      scoreSnapshots, miniExams, miniExamAnswers, listeningRuns, listeningAttempts, usage, subscriptions,
+      reports, drafts, legacyAttempts
     }
   };
 

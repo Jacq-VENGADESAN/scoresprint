@@ -41,9 +41,7 @@ export default async function ListeningPage({ searchParams }: { searchParams: Pr
   let recentRuns: ListeningRunRow[] = [];
   let listeningReady = true;
   try {
-    recentRuns = await supabaseRest<ListeningRunRow[]>(
-      `listening_runs?select=id,mode,total_questions,correct_answers,estimated_score,duration_ms,completed_at&user_id=eq.${user.id}&completed_at=not.is.null&order=completed_at.desc&limit=5`
-    );
+    recentRuns = await supabaseRest<ListeningRunRow[]>(`listening_runs?select=id,mode,total_questions,correct_answers,estimated_score,duration_ms,completed_at&user_id=eq.${user.id}&completed_at=not.is.null&order=completed_at.desc&limit=5`);
   } catch {
     listeningReady = false;
   }
@@ -54,31 +52,25 @@ export default async function ListeningPage({ searchParams }: { searchParams: Pr
         <div>
           <div className="eyebrow">Compréhension orale</div>
           <h1>Travaille ce que tu entends, pas ce que tu crois reconnaître.</h1>
-          <p>Les scripts et illustrations sont originaux. La transcription apparaît uniquement après ta réponse.</p>
+          <p>Les scripts sont originaux et la Partie 1 utilise de vraies photographies sous licence. La transcription apparaît uniquement après ta réponse.</p>
         </div>
-        <Link href="/dashboard" className="btn btn-secondary">Retour au tableau de bord</Link>
+        <div className="training-actions"><Link href="/lessons/part-2-indirect-responses" className="btn btn-secondary">Fiche réponses indirectes</Link><Link href="/dashboard" className="btn btn-secondary">Tableau de bord</Link></div>
       </header>
 
       <nav className="listening-mode-tabs" aria-label="Choisir un type de séance">
         <Link className={mode === "mixed" ? "active" : ""} href="/listening?mode=mixed"><strong>Mix 1 + 2</strong><span>4 photos + 8 questions-réponses</span></Link>
-        <Link className={mode === "part1" ? "active" : ""} href="/listening?mode=part1"><strong>Partie 1</strong><span>10 photographies</span></Link>
+        <Link className={mode === "part1" ? "active" : ""} href="/listening?mode=part1"><strong>Partie 1</strong><span>10 photographies réelles</span></Link>
         <Link className={mode === "part2" ? "active" : ""} href="/listening?mode=part2"><strong>Partie 2</strong><span>10 questions-réponses</span></Link>
       </nav>
 
       {!listeningReady ? <div className="alert alert-warning">Les statistiques Listening ne sont pas encore accessibles. Exécute la migration dédiée.</div> : null}
-
       <ListeningRunner questions={questions} mode={mode} />
 
       {recentRuns.length > 0 ? (
         <section className="card listening-history-card">
           <div className="dashboard-section-head"><div><h2>Dernières séances d’écoute</h2><p>Le score affiché est une estimation interne sur 495 points.</p></div></div>
           <div className="listening-history-list">
-            {recentRuns.map((run) => (
-              <div className="listening-history-row" key={run.id}>
-                <div><strong>{modeLabel(run.mode)}</strong><span>{run.completed_at ? formatDate(run.completed_at) : "—"} · {run.correct_answers}/{run.total_questions}</span></div>
-                <strong>{run.estimated_score ?? "—"}/495</strong>
-              </div>
-            ))}
+            {recentRuns.map((run) => <div className="listening-history-row" key={run.id}><div><strong>{modeLabel(run.mode)}</strong><span>{run.completed_at ? formatDate(run.completed_at) : "—"} · {run.correct_answers}/{run.total_questions}</span></div><strong>{run.estimated_score ?? "—"}/495</strong></div>)}
           </div>
         </section>
       ) : null}

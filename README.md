@@ -1,26 +1,30 @@
 # Aptileo
 
-Aptileo est une plateforme indépendante de préparation adaptative à l’anglais professionnel. Elle analyse les réponses, programme les erreurs à revoir et construit des séances ciblées en Reading et Listening.
+Aptileo est une plateforme indépendante de préparation adaptative au TOEIC® Listening & Reading. Elle analyse les réponses, programme les erreurs à revoir et construit des séances ciblées.
 
 > Le dépôt conserve provisoirement son ancien nom technique `scoresprint`. La marque visible du produit est Aptileo.
 
-## Fonctionnalités
+## État actuel
 
+Aptileo fonctionne en **bêta publique gratuite**. Les paiements sont volontairement désactivés avec `BETA_MODE=true` tant que la couverture pédagogique, les tests utilisateurs et les informations légales ne sont pas finalisés.
+
+Fonctionnalités principales :
+
+- démonstration publique de 8 questions Reading et Listening, sans compte ;
 - compte Supabase avec confirmation, récupération, export et suppression ;
 - diagnostic original de 20 questions ;
-- Reading : parties 5, 6 et 7, séance adaptative, carnet d’erreurs et mini-examen chronométré ;
-- Listening : parties 1 et 2, photographies réelles sous licence Pexels, lecture vocale, transcription après correction et progression distincte ;
-- environ 300 questions Reading originales et 30 exercices Listening originaux ;
+- Reading : parties 5, 6 et 7, environ 300 questions, séance adaptative, carnet d’erreurs et mini-examen ;
+- Listening : parties 1 et 2, 30 exercices, photographies Pexels, lecture vocale et transcription après correction ;
+- 12 fiches express de grammaire, vocabulaire et stratégie ;
 - sauvegarde et reprise des séances ;
 - historique, statistiques et estimation interne ;
-- espace administrateur, import CSV, publication et signalements ;
-- offre gratuite avec quotas côté serveur ;
-- paiements uniques Stripe de 30 ou 90 jours, sans renouvellement automatique ;
-- pages juridiques, footer, sitemap, robots, Open Graph et manifest ;
-- headers de sécurité et limitation des routes sensibles ;
-- tableau de pré-lancement dans `/admin/launch`.
+- liste d’attente Premium et formulaire structuré de retour ;
+- mesure interne du tunnel de bêta, sans publicité ni stockage de l’adresse IP brute ;
+- espace administrateur pour le contenu, les signalements, le pré-lancement et la validation produit ;
+- Stripe Checkout prêt mais bloqué pendant la bêta ;
+- pages juridiques, SEO de base, headers de sécurité et limitation des routes sensibles.
 
-Aucune question officielle TOEIC® n’est copiée. Les exercices sont originaux et utilisent seulement la structure générale de l’épreuve.
+Aucune question officielle TOEIC® n’est copiée. Les exercices utilisent uniquement la structure générale de l’épreuve.
 
 ## Démarrage local
 
@@ -34,45 +38,30 @@ Ouvrir `http://localhost:3000`.
 
 ## Variables d’environnement
 
-### Application, Supabase et administration
-
 ```env
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 NEXT_PUBLIC_SUPABASE_URL=https://votre-projet.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
 SUPABASE_SERVICE_ROLE_KEY=sb_secret_...
 RATE_LIMIT_SALT=une-valeur-longue-et-aleatoire
+BETA_MODE=true
 ADMIN_EMAILS=admin@example.com
-```
 
-### Stripe
-
-```env
 STRIPE_SECRET_KEY=sk_test_...
 STRIPE_WEBHOOK_SECRET=whsec_...
 STRIPE_PRICE_SPRINT_30=price_...
 STRIPE_PRICE_SPRINT_90=price_...
 ```
 
-### Informations légales
+Les secrets restent exclusivement côté serveur. Ne jamais les préfixer par `NEXT_PUBLIC_`, les publier ou les committer.
 
-```env
-LEGAL_BUSINESS_NAME=Aptileo
-LEGAL_PUBLISHER_NAME=
-LEGAL_STATUS=
-LEGAL_ADDRESS=
-LEGAL_REGISTRATION=
-LEGAL_CONTACT_EMAIL=contact@aptileo.fr
-LEGAL_SUPPORT_EMAIL=support@aptileo.fr
-LEGAL_MEDIATOR_NAME=
-LEGAL_MEDIATOR_URL=
-LEGAL_HOST_NAME=Vercel Inc.
-LEGAL_HOST_ADDRESS=440 N Barranca Ave #4133, Covina, CA 91723, États-Unis
-```
+`BETA_MODE=true` :
 
-Les secrets `SUPABASE_SERVICE_ROLE_KEY`, `RATE_LIMIT_SALT`, `STRIPE_SECRET_KEY` et `STRIPE_WEBHOOK_SECRET` restent exclusivement côté serveur. Ne jamais les préfixer par `NEXT_PUBLIC_`, les coller dans une conversation ou les committer.
+- affiche clairement l’état de bêta ;
+- remplace l’achat par une liste d’attente ;
+- bloque toute création de Checkout, même si Stripe est configuré.
 
-Stripe Live est automatiquement bloqué tant que les informations légales obligatoires ne sont pas complètes.
+Pour ouvrir les paiements plus tard, il faudra renseigner les variables `LEGAL_*`, passer `BETA_MODE=false`, puis effectuer les tests Stripe Live.
 
 ## Migrations Supabase
 
@@ -91,50 +80,40 @@ Exécuter les migrations dans cet ordre :
 11. `20260715193000_account_and_session_resume.sql`
 12. `20260716110000_listening_parts_1_2.sql`
 13. `20260718143000_production_rate_limits.sql`
+14. `20260720120000_public_beta_validation.sql`
 
-La dernière migration crée un compteur PostgreSQL utilisé pour limiter la connexion, l’inscription, la récupération de mot de passe et la création de Checkout. Seule la clé `service_role` peut appeler la fonction.
+La quatorzième migration crée :
 
-## Structure utilisateur
+- `product_events` pour la mesure interne du tunnel ;
+- `premium_waitlist` pour les inscriptions volontaires ;
+- `beta_feedback` pour les retours structurés.
+
+Ces tables sont protégées par RLS et accessibles uniquement avec la clé serveur.
+
+## Parcours publics
+
+- `/demo` : 8 questions publiques avec corrections ;
+- `/lessons` : bibliothèque de fiches express ;
+- `/pricing` : bêta gratuite et liste d’attente ;
+- `/feedback` : retour utilisateur structuré ;
+- `/faq`, `/contact`, `/privacy`, `/terms` : confiance et assistance.
+
+## Parcours connecté
 
 - `/dashboard` : progression et priorité du jour ;
-- `/reading` : hub Reading vers séance, erreurs, diagnostic et mini-examen ;
-- `/listening` : hub et séances Listening parties 1 et 2 ;
+- `/reading` : séance, erreurs, diagnostic, mini-examen et fiches ;
+- `/listening` : parties 1 et 2 ;
 - `/history` : historique détaillé ;
 - `/account` : profil, accès, données et suppression.
 
 ## Administration
 
-- `/admin/launch` : état de préparation à la production ;
+- `/admin/beta` : visiteurs, démos, intentions d’inscription, liste d’attente et retours ;
+- `/admin/launch` : état de préparation bêta et commerciale ;
 - `/admin/questions` : catalogue et édition ;
 - `/admin/questions/seed` : installation du lot de 200 questions ;
 - `/admin/questions/import` : import CSV facultatif ;
 - `/admin/reports` : traitement des signalements.
-
-## Photographies du Listening
-
-Les dix exercices de Partie 1 utilisent de vraies photographies Pexels. Le crédit et un lien vers la page source sont affichés sous chaque photographie. Les phrases audio et les distracteurs sont écrits spécialement pour Aptileo.
-
-Ne pas importer d’images trouvées au hasard sur Internet et ne pas recopier de questions ETS ou provenant d’un autre site de préparation.
-
-## Stripe
-
-Créer deux prix uniques :
-
-- Sprint 30 : 24,90 € ;
-- Sprint 90 : 49,90 €.
-
-Webhook :
-
-```text
-https://votre-domaine/api/stripe/webhook
-```
-
-Événements :
-
-- `checkout.session.completed`
-- `checkout.session.async_payment_succeeded`
-
-Le Checkout exige l’acceptation des CGU/CGV et la demande d’activation immédiate. La date de consentement est ajoutée aux métadonnées Stripe. Seul le webhook signé active Premium.
 
 ## Vérifications
 
@@ -142,34 +121,25 @@ Le Checkout exige l’acceptation des CGU/CGV et la demande d’activation immé
 npm run validate:questions
 npm run validate:listening
 npm run validate:launch
+npm run validate:beta
 npm run typecheck
 npm run build
 ```
 
-La CI contrôle notamment :
+La CI contrôle les banques de questions, les photographies, la démonstration, les 12 fiches, le blocage des paiements en bêta, les pages publiques, la sécurité, TypeScript et le build de production.
 
-- la banque Reading ;
-- les 10 photographies et 20 questions-réponses Listening ;
-- la présence de Reading et Listening dans la navigation ;
-- les pages juridiques et SEO ;
-- le consentement avant paiement ;
-- les headers de sécurité ;
-- l’absence de l’ancien nom dans les principaux écrans publics.
+## Avant une ouverture commerciale
 
-## Checklist avant Stripe Live
-
-1. Vérifier le nom Aptileo sur INPI et EUIPO ;
-2. acheter et connecter le domaine définitif ;
-3. remplacer `NEXT_PUBLIC_APP_URL` et mettre à jour Supabase/Stripe ;
-4. renseigner toutes les variables `LEGAL_*` et faire relire les textes ;
-5. désigner un médiateur de la consommation ;
-6. configurer un SMTP Supabase personnalisé avec SPF, DKIM et DMARC ;
-7. exécuter les treize migrations ;
-8. tester inscription, récupération, diagnostic, Reading, Listening, quotas et reprise ;
-9. tester un paiement Stripe en mode Test, puis un achat Live contrôlé et son remboursement ;
-10. mettre en place les alertes Vercel, Supabase et le suivi des erreurs ;
-11. faire relire la banque pédagogique ;
-12. tester Chrome, Edge, Firefox, Safari, Android et iPhone.
+1. Terminer les parties Listening 3 et 4 avec des fichiers audio fixes ;
+2. ajouter des examens blancs plus longs et une banque plus large ;
+3. analyser les données de la bêta et corriger les abandons ;
+4. faire relire les questions et fiches par une personne qualifiée ;
+5. vérifier le nom Aptileo et acheter le domaine ;
+6. créer l’activité professionnelle et renseigner les informations légales ;
+7. configurer le SMTP, le monitoring et les sauvegardes ;
+8. tester plusieurs navigateurs et appareils ;
+9. effectuer un achat Stripe Live contrôlé puis un remboursement ;
+10. seulement ensuite passer `BETA_MODE=false`.
 
 ## Indépendance
 
