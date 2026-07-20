@@ -17,10 +17,10 @@ export function getBetaVisitor(request: NextRequest): BetaVisitor {
 }
 
 export function attachBetaVisitorCookie(response: NextResponse, visitor: BetaVisitor) {
-  if (!visitor.isNew) return response;
+  if (!visitor.isNew || process.env.NODE_ENV !== "production") return response;
   response.cookies.set(BETA_VISITOR_COOKIE, visitor.id, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: true,
     sameSite: "lax",
     path: "/"
   });
