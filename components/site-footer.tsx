@@ -11,26 +11,29 @@ export function SiteFooter() {
       <div className="container site-footer-grid">
         <div className="site-footer-brand">
           <Link href="/" className="footer-wordmark">{BRAND_NAME}</Link>
-          <p>Une préparation structurée à l’anglais professionnel, avec des exercices originaux et une progression mesurée.</p>
+          <p>Une préparation ciblée au TOEIC® Listening & Reading, avec des exercices originaux, des fiches courtes et une progression mesurée.</p>
         </div>
         <div>
           <h2>Produit</h2>
+          <Link href="/demo">Démonstration gratuite</Link>
           <Link href="/reading">Reading</Link>
           <Link href="/listening">Listening</Link>
-          <Link href="/pricing">Tarifs</Link>
-          <Link href="/faq">Questions fréquentes</Link>
+          <Link href="/lessons">Fiches express</Link>
+          <Link href="/pricing">Accès Premium</Link>
         </div>
         <div>
-          <h2>Assistance</h2>
+          <h2>Bêta et assistance</h2>
+          <Link href="/feedback">Donner mon avis</Link>
+          <Link href="/faq">Questions fréquentes</Link>
           <Link href="/contact">Nous contacter</Link>
           <a href={`mailto:${legal.supportEmail}`}>{legal.supportEmail}</a>
-          <Link href="/refund-policy">Rétractation et remboursements</Link>
         </div>
         <div>
           <h2>Informations</h2>
           <Link href="/legal">Mentions légales</Link>
           <Link href="/privacy">Confidentialité</Link>
           <Link href="/terms">CGU et CGV</Link>
+          <Link href="/refund-policy">Rétractation</Link>
         </div>
       </div>
       <div className="container site-footer-bottom">
