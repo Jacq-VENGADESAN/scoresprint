@@ -18,5 +18,6 @@ jobs:
       - run: npm run validate:questions
       - run: npm run validate:listening
       - run: npm run validate:launch
+      - run: npm run validate:beta
       - run: npm run typecheck
       - run: npm run build
