@@ -18,9 +18,10 @@ export function BetaFeedbackForm() {
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const formElement = event.currentTarget;
     setStatus("loading");
     setMessage("");
-    const form = new FormData(event.currentTarget);
+    const form = new FormData(formElement);
     try {
       const response = await fetch("/api/feedback", {
         method: "POST",
@@ -35,10 +36,10 @@ export function BetaFeedbackForm() {
       });
       const payload = (await response.json()) as { error?: string };
       if (!response.ok) throw new Error(payload.error ?? "Envoi impossible.");
+      formElement.reset();
+      setRating(0);
       setStatus("success");
       setMessage("Merci. Ton retour a été enregistré et servira à prioriser les prochaines évolutions.");
-      setRating(0);
-      event.currentTarget.reset();
     } catch (error) {
       setStatus("error");
       setMessage(error instanceof Error ? error.message : "Envoi impossible.");
