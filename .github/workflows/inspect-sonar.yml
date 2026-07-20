@@ -9,7 +9,7 @@ jobs:
     steps:
       - name: Wait for automatic analysis
         run: sleep 90
-      - name: Print open Sonar issues
+      - name: Print security-related Sonar issues
         env:
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
@@ -24,8 +24,16 @@ jobs:
           with open('sonar-issues.json', encoding='utf-8') as handle:
               payload = json.load(handle)
           issues = payload.get('issues', [])
-          print(f'OPEN_ISSUES={len(issues)}')
+          security = []
           for issue in issues:
+              impacts = issue.get('impacts') or []
+              is_security = issue.get('type') == 'VULNERABILITY' or any(
+                  impact.get('softwareQuality') == 'SECURITY' for impact in impacts
+              )
+              if is_security:
+                  security.append(issue)
+          print(f'SECURITY_ISSUES={len(security)}')
+          for issue in security:
               print('---')
               print('RULE=', issue.get('rule'))
               print('MESSAGE=', issue.get('message'))
