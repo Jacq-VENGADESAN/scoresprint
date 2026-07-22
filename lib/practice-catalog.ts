@@ -44,7 +44,8 @@ export function buildPracticeSession(
 
   const due = dueQuestionCodes
     .map((code) => unique.get(code))
-    .filter((question): question is PublicPracticeQuestion => Boolean(question));
+    .filter((question): question is PublicPracticeQuestion => Boolean(question))
+    .sort((a, b) => hash(`${seed}-due-${a.id}`) - hash(`${seed}-due-${b.id}`));
 
   const candidates = [...unique.values()]
     .filter((question) => !dueSet.has(question.id) && !excludedSet.has(question.id))
