@@ -6,6 +6,7 @@ import { getAccessSummary, type AccessSummary } from "@/lib/access";
 import { getPublicPublishedDatabaseQuestions } from "@/lib/database-questions";
 import { buildPracticeSession } from "@/lib/practice-catalog";
 import type { PublicPracticeQuestion } from "@/lib/practice-bank";
+import { orderByIds } from "@/lib/randomization";
 import type { PracticeDraftState, SessionDraftRow } from "@/lib/session-drafts";
 import { getCurrentUser, supabaseRest } from "@/lib/supabase-server";
 
@@ -25,7 +26,7 @@ function validDraft(row: SessionDraftRow<PracticeDraftState> | undefined, review
   return draft;
 }
 
-export default async function PracticePage({ searchParams }: { searchParams: Promise<{ mode?: string }> }) {
+export default async function PracticePage({ searchParams }: Readonly<{ searchParams: Promise<{ mode?: string }> }>) {
   const user = await getCurrentUser();
   if (!user) redirect("/auth?next=/practice");
 
@@ -82,14 +83,11 @@ export default async function PracticePage({ searchParams }: { searchParams: Pro
   const sessionSeed = `${user.id}-${reviewMode ? "review" : "adaptive"}-${randomUUID()}`;
   const excludedQuestionCodes = reviewMode ? [] : [...new Set(recentAttempts.map((attempt) => attempt.question_code))];
 
-  let questions: PublicPracticeQuestion[];
+  let questions: PublicPracticeQuestion[] = [];
   if (initialDraft) {
-    questions = buildPracticeSession([], initialDraft.questionIds, initialDraft.questionIds.length, `${sessionSeed}-resume`, [], managedQuestions);
-    const exactMatch = questions.length === initialDraft.questionIds.length
-      && questions.every((question, index) => question.id === initialDraft?.questionIds[index]);
-    if (!exactMatch) initialDraft = null;
-  } else {
-    questions = [];
+    const resumePool = buildPracticeSession([], initialDraft.questionIds, initialDraft.questionIds.length, `${sessionSeed}-resume`, [], managedQuestions);
+    questions = orderByIds(resumePool, initialDraft.questionIds) ?? [];
+    if (questions.length !== initialDraft.questionIds.length) initialDraft = null;
   }
 
   if (!initialDraft) {
@@ -105,13 +103,7 @@ export default async function PracticePage({ searchParams }: { searchParams: Pro
       <header className="page-head page-head-compact">
         <div className="eyebrow">{reviewMode ? "Carnet d’erreurs" : `Séance adaptative · ${dailyMinutes} minutes`}</div>
         <h1>{initialDraft ? "Ta séance interrompue est prête à reprendre." : reviewMode ? "Réactive les notions qui t’ont déjà piégé." : "Une sélection différente à chaque nouvelle séance."}</h1>
-        <p>
-          {initialDraft
-            ? "Les réponses déjà validées, la question actuelle et le temps écoulé ont été restaurés."
-            : reviewMode
-              ? "Les erreurs reviennent à leur date de révision et leur ordre varie entre les séances."
-              : "Le moteur conserve tes priorités et évite les répétitions récentes, tout en renouvelant l’ordre et la sélection pour chaque utilisateur."}
-        </p>
+        <p>{initialDraft ? "Les réponses, la question actuelle et l’ordre exact ont été restaurés." : reviewMode ? "Les erreurs reviennent à leur date de révision et leur ordre varie entre les séances." : "Le moteur conserve tes priorités et évite les répétitions récentes, tout en renouvelant l’ordre et la sélection."}</p>
       </header>
 
       {access && !access.isPremium ? (
