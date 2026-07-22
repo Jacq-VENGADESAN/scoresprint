@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { redirect } from "next/navigation";
 import { PracticeRunner } from "@/components/practice-runner";
 import { UpgradeGate } from "@/components/upgrade-gate";
@@ -78,12 +79,12 @@ export default async function PracticePage({ searchParams }: { searchParams: Pro
     .map((item) => item.question_code);
   const questionCount = Math.max(6, Math.min(12, Math.round(dailyMinutes / 2)));
   const priorities = masteryRows.map((row) => ({ skillId: row.skill_id, mastery: Number(row.mastery) }));
-  const seed = `${user.id}-${new Date().toISOString().slice(0, 10)}-${reviewMode ? "review" : "daily"}`;
+  const sessionSeed = `${user.id}-${reviewMode ? "review" : "adaptive"}-${randomUUID()}`;
   const excludedQuestionCodes = reviewMode ? [] : [...new Set(recentAttempts.map((attempt) => attempt.question_code))];
 
   let questions: PublicPracticeQuestion[];
   if (initialDraft) {
-    questions = buildPracticeSession([], initialDraft.questionIds, initialDraft.questionIds.length, `${seed}-resume`, [], managedQuestions);
+    questions = buildPracticeSession([], initialDraft.questionIds, initialDraft.questionIds.length, `${sessionSeed}-resume`, [], managedQuestions);
     const exactMatch = questions.length === initialDraft.questionIds.length
       && questions.every((question, index) => question.id === initialDraft?.questionIds[index]);
     if (!exactMatch) initialDraft = null;
@@ -94,7 +95,7 @@ export default async function PracticePage({ searchParams }: { searchParams: Pro
   if (!initialDraft) {
     questions = reviewMode && dueQuestionCodes.length === 0
       ? []
-      : buildPracticeSession(priorities, dueQuestionCodes, questionCount, seed, excludedQuestionCodes, managedQuestions);
+      : buildPracticeSession(priorities, dueQuestionCodes, questionCount, sessionSeed, excludedQuestionCodes, managedQuestions);
   }
 
   const blocked = Boolean(access && !access.isPremium && (access.practice.remaining ?? 0) <= 0 && !initialDraft);
@@ -103,13 +104,13 @@ export default async function PracticePage({ searchParams }: { searchParams: Pro
     <div className="container focus-page">
       <header className="page-head page-head-compact">
         <div className="eyebrow">{reviewMode ? "Carnet d’erreurs" : `Séance adaptative · ${dailyMinutes} minutes`}</div>
-        <h1>{initialDraft ? "Ta séance interrompue est prête à reprendre." : reviewMode ? "Réactive les notions qui t’ont déjà piégé." : "Une seule priorité à la fois."}</h1>
+        <h1>{initialDraft ? "Ta séance interrompue est prête à reprendre." : reviewMode ? "Réactive les notions qui t’ont déjà piégé." : "Une sélection différente à chaque nouvelle séance."}</h1>
         <p>
           {initialDraft
             ? "Les réponses déjà validées, la question actuelle et le temps écoulé ont été restaurés."
             : reviewMode
-              ? "Les erreurs reviennent à leur date de révision et disparaissent après plusieurs réussites stables."
-              : "La séance privilégie les faiblesses utiles, les erreurs arrivées à échéance et évite les répétitions trop récentes."}
+              ? "Les erreurs reviennent à leur date de révision et leur ordre varie entre les séances."
+              : "Le moteur conserve tes priorités et évite les répétitions récentes, tout en renouvelant l’ordre et la sélection pour chaque utilisateur."}
         </p>
       </header>
 
