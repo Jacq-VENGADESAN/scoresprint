@@ -6,6 +6,8 @@ export const FREE_LIMITS = {
   historyDays: 7
 } as const;
 
+export const COACH_90_DAILY_AI_LIMIT = 10;
+
 export type AccessPlan = "free" | "premium";
 export type UsageMetric = "practice_session" | "mini_exam";
 
@@ -136,9 +138,13 @@ export function historyCutoffIso(access: AccessSummary, now = new Date()) {
   return cutoff.toISOString();
 }
 
+export function hasCoach90Access(access: AccessSummary) {
+  return access.isPremium && access.planCode === "sprint_90";
+}
+
 export function accessLabel(access: AccessSummary) {
   if (!access.isPremium) return "Gratuit";
-  if (access.planCode === "sprint_90") return "Sprint 90 jours";
-  if (access.planCode === "sprint_30") return "Sprint 30 jours";
+  if (access.planCode === "sprint_90") return "Coach 90";
+  if (access.planCode === "sprint_30") return "Sprint 30";
   return "Premium";
 }
