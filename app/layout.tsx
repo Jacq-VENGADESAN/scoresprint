@@ -15,6 +15,7 @@ import "./account-session.css";
 import "./listening.css";
 import "./launch.css";
 import "./beta.css";
+import "./coach.css";
 import { Header } from "@/components/header";
 import { ProductAnalytics } from "@/components/product-analytics";
 import { SiteFooter } from "@/components/site-footer";
@@ -57,7 +58,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         {beta ? (
           <div className="beta-ribbon">
             <div className="container beta-ribbon-inner">
-              <span>Aptileo est actuellement en bêta publique gratuite.</span>
+              <span>Aptileo est actuellement en bêta privée de préparation.</span>
               <Link href="/feedback">Partager un retour</Link>
             </div>
           </div>
