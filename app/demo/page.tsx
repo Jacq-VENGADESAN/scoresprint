@@ -4,6 +4,8 @@ import { PublicDemoRunner } from "@/components/public-demo-runner";
 import { DEMO_QUESTIONS } from "@/lib/demo-bank";
 import { seededShuffle } from "@/lib/randomization";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = {
   title: "Démonstration gratuite",
   description: "Teste gratuitement huit exercices originaux de préparation au TOEIC avec corrections détaillées, sans créer de compte."
