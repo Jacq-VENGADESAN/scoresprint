@@ -51,12 +51,8 @@ declare
   v_today date := current_date;
   v_count integer;
 begin
-  if v_user_id is null then
-    raise exception 'AUTH_REQUIRED';
-  end if;
-  if p_limit < 1 or p_limit > 100 or p_cost < 1 or p_cost > 5 then
-    raise exception 'INVALID_AI_LIMIT';
-  end if;
+  if v_user_id is null then raise exception 'AUTH_REQUIRED'; end if;
+  if p_limit < 1 or p_limit > 100 or p_cost < 1 or p_cost > 5 then raise exception 'INVALID_AI_LIMIT'; end if;
 
   insert into public.ai_coach_usage (user_id, period_start, usage_count, updated_at)
   values (v_user_id, v_today, p_cost, now())
@@ -78,8 +74,32 @@ begin
 end;
 $$;
 
+create or replace function public.refund_ai_coach_credit(p_cost integer default 1)
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_user_id uuid := auth.uid();
+  v_count integer;
+begin
+  if v_user_id is null then raise exception 'AUTH_REQUIRED'; end if;
+  if p_cost < 1 or p_cost > 5 then raise exception 'INVALID_AI_COST'; end if;
+
+  update public.ai_coach_usage
+  set usage_count = greatest(0, usage_count - p_cost), updated_at = now()
+  where user_id = v_user_id and period_start = current_date
+  returning usage_count into v_count;
+
+  return coalesce(v_count, 0);
+end;
+$$;
+
 revoke all on function public.consume_ai_coach_credit(integer, integer) from public;
+revoke all on function public.refund_ai_coach_credit(integer) from public;
 grant execute on function public.consume_ai_coach_credit(integer, integer) to authenticated;
+grant execute on function public.refund_ai_coach_credit(integer) to authenticated;
 
 grant select on public.ai_coach_usage to authenticated;
 grant select, insert, update on public.ai_coach_plans to authenticated;
