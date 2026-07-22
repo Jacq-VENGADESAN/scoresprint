@@ -94,11 +94,19 @@ export const COACH_EXPLANATION_SCHEMA: Record<string, unknown> = {
 type ConsumeCoachCreditRow = { allowed: boolean; usage_count: number; remaining: number };
 
 export async function consumeCoachCredits(cost: number) {
+  const normalizedCost = Math.max(1, Math.min(cost, 5));
   const rows = await supabaseRest<ConsumeCoachCreditRow[]>("rpc/consume_ai_coach_credit", {
     method: "POST",
-    body: JSON.stringify({ p_limit: COACH_90_DAILY_AI_LIMIT, p_cost: Math.max(1, Math.min(cost, 5)) })
+    body: JSON.stringify({ p_limit: COACH_90_DAILY_AI_LIMIT, p_cost: normalizedCost })
   });
   return rows[0] ?? { allowed: false, usage_count: COACH_90_DAILY_AI_LIMIT, remaining: 0 };
+}
+
+export async function refundCoachCredits(cost: number) {
+  await supabaseRest<number>("rpc/refund_ai_coach_credit", {
+    method: "POST",
+    body: JSON.stringify({ p_cost: Math.max(1, Math.min(cost, 5)) })
+  });
 }
 
 export const COACH_PLAN_INSTRUCTIONS = `Tu es le coach pédagogique d'Aptileo, une préparation indépendante au TOEIC Listening & Reading. Crée un programme hebdomadaire concret en français à partir des données fournies. Utilise uniquement les activités réellement disponibles dans le produit : séance Reading adaptative, carnet d'erreurs, mini-examen Reading, Listening parties 1 et 2 et fiches pédagogiques. Ne prétends jamais produire un score officiel. Propose exactement sept journées, respecte le temps quotidien indiqué, priorise les compétences faibles et reste encourageant sans promettre de gain de score.`;
