@@ -21,6 +21,7 @@ const privateLinks: NavigationLink[] = [
   { label: "Tableau de bord", href: "/dashboard", exact: true },
   { label: "Reading", href: "/reading", activePrefixes: ["/practice", "/mock-exam", "/diagnostic"] },
   { label: "Listening", href: "/listening" },
+  { label: "Coach 90", href: "/coach" },
   { label: "Fiches", href: "/lessons" },
   { label: "Mes erreurs", href: "/errors" },
   { label: "Historique", href: "/history" }
@@ -34,7 +35,7 @@ const publicLinks: NavigationLink[] = [
   { label: "FAQ", href: "/faq" }
 ];
 
-function MenuIcon({ open }: { open: boolean }) {
+function MenuIcon({ open }: Readonly<{ open: boolean }>) {
   return open ? (
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" /></svg>
   ) : (
@@ -68,7 +69,7 @@ function isCurrent(pathname: string, link: NavigationLink) {
   return link.exact ? pathname === link.href : pathname === link.href || pathname.startsWith(`${link.href}/`);
 }
 
-export function SiteNavigation({ authenticated, admin, displayName }: NavigationProps) {
+export function SiteNavigation({ authenticated, admin, displayName }: Readonly<NavigationProps>) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const links = authenticated ? privateLinks : publicLinks;
@@ -92,9 +93,7 @@ export function SiteNavigation({ authenticated, admin, displayName }: Navigation
   return (
     <div className="navigation-shell">
       <nav className="desktop-nav" aria-label="Navigation principale">
-        {links.map((link) => (
-          <Link className={`nav-link ${isCurrent(pathname, link) ? "active" : ""}`} href={link.href} key={link.href}>{link.label}</Link>
-        ))}
+        {links.map((link) => <Link className={`nav-link ${isCurrent(pathname, link) ? "active" : ""}`} href={link.href} key={link.href}>{link.label}</Link>)}
       </nav>
 
       <div className="header-actions">
@@ -107,6 +106,7 @@ export function SiteNavigation({ authenticated, admin, displayName }: Navigation
             </summary>
             <div className="account-popover">
               <Link href="/account"><UserIcon />Mon compte</Link>
+              <Link href="/coach"><TargetIcon />Coach 90</Link>
               <Link href="/diagnostic"><TargetIcon />Refaire le diagnostic</Link>
               <Link href="/feedback"><TargetIcon />Donner mon avis</Link>
               <Link href="/pricing"><CardIcon />Accès et tarifs</Link>
@@ -130,9 +130,7 @@ export function SiteNavigation({ authenticated, admin, displayName }: Navigation
 
       <nav id="mobile-navigation" className="mobile-navigation" aria-label="Navigation mobile" hidden={!open}>
         <div className="mobile-nav-links">
-          {links.map((link) => (
-            <Link className={`nav-link ${isCurrent(pathname, link) ? "active" : ""}`} href={link.href} key={link.href} onClick={closeMenu}>{link.label}</Link>
-          ))}
+          {links.map((link) => <Link className={`nav-link ${isCurrent(pathname, link) ? "active" : ""}`} href={link.href} key={link.href} onClick={closeMenu}>{link.label}</Link>)}
           {authenticated && admin ? <Link className={`nav-link ${pathname.startsWith("/admin") ? "active" : ""}`} href="/admin/questions" onClick={closeMenu}>Administration</Link> : null}
         </div>
         <div className="mobile-nav-actions">

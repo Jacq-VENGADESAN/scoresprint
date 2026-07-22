@@ -15,11 +15,14 @@ import "./account-session.css";
 import "./listening.css";
 import "./launch.css";
 import "./beta.css";
+import "./coach.css";
 import { Header } from "@/components/header";
 import { ProductAnalytics } from "@/components/product-analytics";
 import { SiteFooter } from "@/components/site-footer";
 import { appUrl, BRAND_DESCRIPTION, BRAND_NAME } from "@/lib/brand";
 import { betaModeEnabled } from "@/lib/beta";
+
+const privateBeta = betaModeEnabled();
 
 export const metadata: Metadata = {
   metadataBase: new URL(appUrl()),
@@ -42,22 +45,21 @@ export const metadata: Metadata = {
     title: `${BRAND_NAME} — Progresse là où ça compte`,
     description: BRAND_DESCRIPTION
   },
-  robots: { index: true, follow: true },
+  robots: privateBeta ? { index: false, follow: false, noarchive: true } : { index: true, follow: true },
   category: "education"
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  const beta = betaModeEnabled();
   return (
     <html lang="fr">
       <body>
         <a className="skip-link" href="#main-content">Aller au contenu</a>
         <ProductAnalytics />
         <Header />
-        {beta ? (
+        {privateBeta ? (
           <div className="beta-ribbon">
             <div className="container beta-ribbon-inner">
-              <span>Aptileo est actuellement en bêta publique gratuite.</span>
+              <span>Aptileo est actuellement en bêta privée de préparation.</span>
               <Link href="/feedback">Partager un retour</Link>
             </div>
           </div>

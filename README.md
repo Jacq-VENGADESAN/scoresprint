@@ -6,25 +6,67 @@ Aptileo est une plateforme indépendante de préparation adaptative au TOEIC® L
 
 ## État actuel
 
-Aptileo fonctionne en **bêta publique gratuite**. Les paiements sont volontairement désactivés avec `BETA_MODE=true` tant que la couverture pédagogique, les tests utilisateurs et les informations légales ne sont pas finalisés.
+Le projet reste protégé par `BETA_MODE=true` pendant la configuration commerciale. Les paiements réels doivent rester bloqués jusqu’à la validation des informations légales, du médiateur, du domaine, de Stripe Live, du SMTP et des tests finaux.
 
 Fonctionnalités principales :
 
-- démonstration publique de 8 questions Reading et Listening, sans compte ;
-- compte Supabase avec confirmation, récupération, export et suppression ;
+- démonstration publique de 8 questions, sans compte ;
 - diagnostic original de 20 questions ;
-- Reading : parties 5, 6 et 7, environ 300 questions, séance adaptative, carnet d’erreurs et mini-examen ;
-- Listening : parties 1 et 2, 30 exercices, photographies Pexels, lecture vocale et transcription après correction ;
-- 12 fiches express de grammaire, vocabulaire et stratégie ;
-- sauvegarde et reprise des séances ;
-- historique, statistiques et estimation interne ;
-- liste d’attente Premium et formulaire structuré de retour ;
-- mesure interne du tunnel de bêta, sans publicité ni stockage de l’adresse IP brute ;
-- espace administrateur pour le contenu, les signalements, le pré-lancement et la validation produit ;
-- Stripe Checkout prêt mais bloqué pendant la bêta ;
-- pages juridiques, SEO de base, headers de sécurité et limitation des routes sensibles.
+- Reading parties 5, 6 et 7, environ 300 questions, séance adaptative, carnet d’erreurs et mini-examen ;
+- Listening parties 1 et 2 avec photographies réelles, lecture vocale et transcription après correction ;
+- randomisation des démonstrations, diagnostics, séances Reading, séances Listening et mini-examens ;
+- reprise d’une séance interrompue dans son ordre exact ;
+- 12 fiches de grammaire, vocabulaire et stratégie ;
+- historique, statistiques, export et suppression du compte ;
+- Stripe Checkout, quotas et espace administrateur ;
+- Coach 90 avec programme IA de 7 jours et explications personnalisées ;
+- pages juridiques, SEO de base, sécurité et limitation anti-abus.
 
-Aucune question officielle TOEIC® n’est copiée. Les exercices utilisent uniquement la structure générale de l’épreuve.
+Aucune question officielle TOEIC® n’est copiée.
+
+## Offres prévues
+
+### Gratuit
+
+- démonstration et diagnostic ;
+- 1 séance Reading par jour ;
+- Listening parties 1 et 2 ;
+- 1 mini-examen par mois ;
+- historique limité.
+
+### Sprint 30 — 9,90 € au lancement
+
+Paiement unique pour 30 jours :
+
+- Reading et Listening illimités ;
+- mini-examens illimités ;
+- carnet d’erreurs et répétition espacée ;
+- historique et statistiques complets ;
+- toutes les fiches pédagogiques.
+
+### Coach 90 — 24,90 € au lancement
+
+Paiement unique pour 90 jours :
+
+- toutes les fonctions du Sprint 30 ;
+- programme hebdomadaire généré à partir des objectifs, maîtrises et erreurs ;
+- explications personnalisées d’erreurs vérifiées ;
+- 10 crédits IA quotidiens ;
+- nouveaux contenus ajoutés pendant l’accès.
+
+Un programme utilise 3 crédits. Une explication utilise 1 crédit. Les crédits sont remboursés automatiquement si l’appel IA échoue.
+
+## Randomisation
+
+Chaque nouvelle tentative reçoit un ordre renouvelé :
+
+- `/demo` ;
+- `/diagnostic` ;
+- `/practice` ;
+- `/listening` ;
+- `/mock-exam`.
+
+Les profils et priorités pédagogiques restent respectés. Les brouillons stockent les identifiants de questions afin de reprendre une séance exactement dans le même ordre.
 
 ## Démarrage local
 
@@ -36,84 +78,101 @@ npm run dev
 
 Ouvrir `http://localhost:3000`.
 
-## Variables d’environnement
+## Variables principales
 
 ```env
 NEXT_PUBLIC_APP_URL=http://localhost:3000
-NEXT_PUBLIC_SUPABASE_URL=https://votre-projet.supabase.co
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
-SUPABASE_SERVICE_ROLE_KEY=sb_secret_...
-RATE_LIMIT_SALT=une-valeur-longue-et-aleatoire
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+RATE_LIMIT_SALT=
 BETA_MODE=true
 ADMIN_EMAILS=admin@example.com
 
-STRIPE_SECRET_KEY=sk_test_...
-STRIPE_WEBHOOK_SECRET=whsec_...
-STRIPE_PRICE_SPRINT_30=price_...
-STRIPE_PRICE_SPRINT_90=price_...
+STRIPE_SECRET_KEY=
+STRIPE_WEBHOOK_SECRET=
+STRIPE_PRICE_SPRINT_30=
+STRIPE_PRICE_SPRINT_90=
+
+OPENAI_API_KEY=
+OPENAI_MODEL=gpt-5-mini
 ```
 
-Les secrets restent exclusivement côté serveur. Ne jamais les préfixer par `NEXT_PUBLIC_`, les publier ou les committer.
+Les secrets restent uniquement côté serveur. Ne jamais utiliser `NEXT_PUBLIC_` pour une clé secrète.
 
-`BETA_MODE=true` :
+## Informations légales
 
-- affiche clairement l’état de bêta ;
-- remplace l’achat par une liste d’attente ;
-- bloque toute création de Checkout, même si Stripe est configuré.
+```env
+LEGAL_BUSINESS_NAME=Aptileo
+LEGAL_PUBLISHER_NAME=
+LEGAL_STATUS=Entrepreneur individuel - micro-entrepreneur
+LEGAL_ADDRESS=
+LEGAL_SIREN=
+LEGAL_SIRET=
+LEGAL_APE_CODE=
+LEGAL_VAT_NUMBER=
+LEGAL_CONTACT_EMAIL=
+LEGAL_SUPPORT_EMAIL=
+LEGAL_PHONE=
+LEGAL_MEDIATOR_NAME=
+LEGAL_MEDIATOR_URL=
+LEGAL_MEDIATOR_ADDRESS=
+```
 
-Pour ouvrir les paiements plus tard, il faudra renseigner les variables `LEGAL_*`, passer `BETA_MODE=false`, puis effectuer les tests Stripe Live.
+Les vrais numéros SIREN/SIRET et coordonnées doivent être ajoutés dans Vercel, jamais dans GitHub.
+
+## OpenAI
+
+Le Coach 90 utilise l’API Responses côté serveur :
+
+- `store: false` ;
+- sorties JSON strictement structurées ;
+- aucun chatbot libre ;
+- aucun nom, e-mail, mot de passe ou donnée bancaire envoyé ;
+- quotas journaliers atomiques dans Supabase ;
+- la bonne réponse Aptileo reste la source de vérité.
 
 ## Migrations Supabase
 
-Exécuter les migrations dans cet ordre :
+Exécuter les migrations existantes dans leur ordre chronologique, puis :
 
-1. `20260713150000_initial_schema.sql`
-2. `20260713173000_auth_and_goal_persistence.sql`
-3. `20260713200000_diagnostic_persistence.sql`
-4. `20260713213000_adaptive_practice.sql`
-5. `20260713223000_progress_analytics.sql`
-6. `20260713233000_calibrated_mastery_mini_exams.sql`
-7. `20260714113000_free_tier_usage_limits.sql`
-8. `20260714173000_stripe_checkout_payments.sql`
-9. `20260714210000_content_admin_platform.sql`
-10. `20260714230000_bulk_import_quality_tools.sql`
-11. `20260715193000_account_and_session_resume.sql`
-12. `20260716110000_listening_parts_1_2.sql`
-13. `20260718143000_production_rate_limits.sql`
 14. `20260720120000_public_beta_validation.sql`
+15. `20260722190000_coach_90_ai_and_launch_legal.sql`
 
-La quatorzième migration crée :
+La quinzième migration crée :
 
-- `product_events` pour la mesure interne du tunnel ;
-- `premium_waitlist` pour les inscriptions volontaires ;
-- `beta_feedback` pour les retours structurés.
+- `ai_coach_usage` ;
+- `ai_coach_plans` ;
+- `consume_ai_coach_credit` ;
+- `refund_ai_coach_credit`.
 
-Ces tables sont protégées par RLS et accessibles uniquement avec la clé serveur.
+## Parcours
 
-## Parcours publics
+Publics :
 
-- `/demo` : 8 questions publiques avec corrections ;
-- `/lessons` : bibliothèque de fiches express ;
-- `/pricing` : bêta gratuite et liste d’attente ;
-- `/feedback` : retour utilisateur structuré ;
-- `/faq`, `/contact`, `/privacy`, `/terms` : confiance et assistance.
+- `/demo` ;
+- `/lessons` ;
+- `/pricing` ;
+- `/faq` ;
+- `/contact` ;
+- `/legal`, `/privacy`, `/terms`.
 
-## Parcours connecté
+Connectés :
 
-- `/dashboard` : progression et priorité du jour ;
-- `/reading` : séance, erreurs, diagnostic, mini-examen et fiches ;
-- `/listening` : parties 1 et 2 ;
-- `/history` : historique détaillé ;
-- `/account` : profil, accès, données et suppression.
+- `/dashboard` ;
+- `/reading` ;
+- `/listening` ;
+- `/coach` ;
+- `/errors` ;
+- `/history` ;
+- `/account`.
 
-## Administration
+Administration :
 
-- `/admin/beta` : visiteurs, démos, intentions d’inscription, liste d’attente et retours ;
-- `/admin/launch` : état de préparation bêta et commerciale ;
-- `/admin/questions` : catalogue et édition ;
-- `/admin/questions/seed` : installation du lot de 200 questions ;
-- `/admin/questions/import` : import CSV facultatif ;
-- `/admin/reports` : traitement des signalements.
+- `/admin/launch` ;
+- `/admin/beta` ;
+- `/admin/questions` ;
+- `/admin/reports`.
 
 ## Vérifications
 
@@ -122,25 +181,26 @@ npm run validate:questions
 npm run validate:listening
 npm run validate:launch
 npm run validate:beta
+npm run validate:coach
 npm run typecheck
 npm run build
 ```
 
-La CI contrôle les banques de questions, les photographies, la démonstration, les 12 fiches, le blocage des paiements en bêta, les pages publiques, la sécurité, TypeScript et le build de production.
+## Avant `BETA_MODE=false`
 
-## Avant une ouverture commerciale
-
-1. Terminer les parties Listening 3 et 4 avec des fichiers audio fixes ;
-2. ajouter des examens blancs plus longs et une banque plus large ;
-3. analyser les données de la bêta et corriger les abandons ;
-4. faire relire les questions et fiches par une personne qualifiée ;
-5. vérifier le nom Aptileo et acheter le domaine ;
-6. créer l’activité professionnelle et renseigner les informations légales ;
-7. configurer le SMTP, le monitoring et les sauvegardes ;
-8. tester plusieurs navigateurs et appareils ;
-9. effectuer un achat Stripe Live contrôlé puis un remboursement ;
-10. seulement ensuite passer `BETA_MODE=false`.
+1. Exécuter toutes les migrations Supabase ;
+2. renseigner les variables SIREN, SIRET, adresse, téléphone et contact ;
+3. désigner un médiateur de la consommation ;
+4. faire relire les pages juridiques ;
+5. vérifier le nom Aptileo et connecter le domaine ;
+6. configurer le SMTP Supabase avec SPF, DKIM et DMARC ;
+7. créer les deux prix Stripe Live à 9,90 € et 24,90 € ;
+8. créer le webhook Live ;
+9. configurer `OPENAI_API_KEY` et vérifier le budget ;
+10. tester inscription, récupération, entraînement, randomisation, Coach 90, paiement, activation et remboursement ;
+11. tester les principaux navigateurs et appareils ;
+12. seulement ensuite passer `BETA_MODE=false`.
 
 ## Indépendance
 
-TOEIC® est une marque déposée d’ETS. Aptileo est indépendant et n’est ni affilié, ni approuvé, ni sponsorisé par ETS. Les scores affichés sont des estimations internes et ne constituent pas des résultats officiels.
+TOEIC® est une marque déposée d’ETS. Aptileo est indépendant et n’est ni affilié, ni approuvé, ni sponsorisé par ETS. Les scores affichés sont des estimations internes.

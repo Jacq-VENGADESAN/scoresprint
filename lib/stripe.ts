@@ -50,11 +50,11 @@ export function stripeIsConfigured() {
 export function getPaidPlan(code: string): PaidPlan | null {
   if (code === "sprint_30") {
     const priceId = process.env.STRIPE_PRICE_SPRINT_30?.trim();
-    return priceId ? { code, label: "Sprint 30 jours", days: 30, priceId } : null;
+    return priceId ? { code, label: "Sprint 30", days: 30, priceId } : null;
   }
   if (code === "sprint_90") {
     const priceId = process.env.STRIPE_PRICE_SPRINT_90?.trim();
-    return priceId ? { code, label: "Sprint 90 jours", days: 90, priceId } : null;
+    return priceId ? { code, label: "Coach 90", days: 90, priceId } : null;
   }
   return null;
 }
@@ -102,6 +102,7 @@ export async function createCheckoutSession(input: {
     "line_items[0][quantity]": 1,
     "metadata[user_id]": userId,
     "metadata[plan_code]": plan.code,
+    "metadata[plan_label]": plan.label,
     "metadata[access_days]": plan.days,
     "metadata[terms_accepted_at]": consentAcceptedAt,
     "metadata[immediate_access_requested]": "true",
@@ -142,9 +143,7 @@ export function verifyStripeWebhook(payload: string, signatureHeader: string | n
 
   const timestampNumber = Number(timestamp);
   if (!Number.isFinite(timestampNumber)) throw new Error("INVALID_STRIPE_SIGNATURE_TIMESTAMP");
-  if (Math.abs(Math.floor(Date.now() / 1000) - timestampNumber) > toleranceSeconds) {
-    throw new Error("EXPIRED_STRIPE_SIGNATURE");
-  }
+  if (Math.abs(Math.floor(Date.now() / 1000) - timestampNumber) > toleranceSeconds) throw new Error("EXPIRED_STRIPE_SIGNATURE");
 
   const expected = createHmac("sha256", requiredEnv("STRIPE_WEBHOOK_SECRET"))
     .update(`${timestamp}.${payload}`, "utf8")

@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ListeningRunner } from "@/components/listening-runner";
@@ -35,7 +36,7 @@ export default async function ListeningPage({ searchParams }: { searchParams: Pr
   const params = await searchParams;
   const mode = modeFromParam(params.mode);
   const questionCount = mode === "mixed" ? 12 : 10;
-  const seed = `${user.id}-${new Date().toISOString().slice(0, 10)}-${mode}`;
+  const seed = `${user.id}-${mode}-${randomUUID()}`;
   const questions = buildListeningSession(mode, questionCount, seed);
 
   let recentRuns: ListeningRunRow[] = [];
@@ -51,8 +52,8 @@ export default async function ListeningPage({ searchParams }: { searchParams: Pr
       <header className="page-head page-head-compact listening-page-head">
         <div>
           <div className="eyebrow">Compréhension orale</div>
-          <h1>Travaille ce que tu entends, pas ce que tu crois reconnaître.</h1>
-          <p>Les scripts sont originaux et la Partie 1 utilise de vraies photographies sous licence. La transcription apparaît uniquement après ta réponse.</p>
+          <h1>Une nouvelle sélection à chaque séance d’écoute.</h1>
+          <p>Les scripts sont originaux, la Partie 1 utilise de vraies photographies sous licence et l’ordre varie pour éviter une expérience identique entre utilisateurs.</p>
         </div>
         <div className="training-actions"><Link href="/lessons/part-2-indirect-responses" className="btn btn-secondary">Fiche réponses indirectes</Link><Link href="/dashboard" className="btn btn-secondary">Tableau de bord</Link></div>
       </header>
